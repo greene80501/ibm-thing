@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}Script Helper{% endblock %}
+{% block header %}Script Helper Assistant{% endblock %}
+{% block subtitle %}Generate compelling YouTube scripts with AI assistance{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    <!-- Input Section -->
+    <div class="card p-8">
+        <div class="flex items-center mb-6">
+            <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center mr-4">
+                <i class="fas fa-magic text-red-400 text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-semibold text-white">Generate New Script</h3>
+                <p class="text-slate-400">Create engaging YouTube content with AI-powered assistance</p>
+            </div>
+        </div>
+        
+        <form id="script-gen-form" class="api-form space-y-6">
+            <!-- Topic Input -->
+            <div>
+                <label for="topic" class="block text-lg font-medium text-white mb-3">
+                    <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                    Topic Idea
+                </label>
+                <input type="text" id="topic" 
+                       class="w-full p-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200" 
+                       placeholder="e.g., '3 easy photo editing tips for beginners'" required>
+                <p class="text-slate-500 text-sm mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Be specific about your topic for better results
+                </p>
+            </div>
+
+            <!-- Model Selection -->
+            <div>
+                <label for="model-select" class="block text-lg font-medium text-white mb-3">
+                    <i class="fas fa-robot text-blue-400 mr-2"></i>
+                    AI Model
+                </label>
+                <select id="model-select" class="w-full p-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200">
+                    <option value="ibm/granite-13b-chat-v2" selected>Granite 13B (Balanced & Reliable)</option>
+                    <option value="meta-llama/llama-3-8b-instruct">Llama 3 8B (Fast & Creative)</option>
+                    <option value="mistralai/mixtral-8x7b-instruct-v01">Mixtral 8x7B (Advanced Reasoning)</option>
+                    <option value="ibm/granite-guardian-3-2b">Granite Guardian 2B (Secure & Safe)</option>
+                </select>
+                <p class="text-slate-500 text-sm mt-2">
+                    Different models offer varying styles and capabilities
+                </p>
+            </div>
+
+            <!-- Advanced Options (Collapsible) -->
+            <div>
+                <button type="button" id="advanced-toggle" class="flex items-center text-slate-400 hover:text-white transition-colors duration-200 mb-3">
+                    <i class="fas fa-cog mr-2"></i>
+                    Advanced Options
+                    <i class="fas fa-chevron-down ml-2 transform transition-transform duration-200" id="advanced-chevron"></i>
+                </button>
+                <div id="advanced-options" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="duration" class="block text-sm font-medium text-white mb-2">Target Duration</label>
+                            <select id="duration" class="w-full p-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white">
+                                <option value="short">Short (30-60s)</option>
+                                <option value="medium" selected>Medium (60-180s)</option>
+                                <option value="long">Long (180s+)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tone" class="block text-sm font-medium text-white mb-2">Tone</label>
+                            <select id="tone" class="w-full p-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white">
+                                <option value="energetic" selected>Energetic</option>
+                                <option value="professional">Professional</option>
+                                <option value="casual">Casual</option>
+                                <option value="educational">Educational</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" id="generate-button" 
+                    class="w-full btn-primary px-8 py-4 rounded-xl text-white font-semibold text-lg hover:shadow-lg transform transition-all duration-200 flex items-center justify-center">
+                <span id="button-text">Generate Script</span>
+                <i id="button-spinner" class="fas fa-spinner fa-spin ml-3 hidden"></i>
+                <i class="fas fa-magic ml-3" id="button-icon"></i>
+            </button>
+        </form>
+         
+        <div class="mt-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-400 mr-3 mt-1"></i>
+                <div>
+                    <p class="text-blue-300 font-medium text-sm">Style Learning</p>
+                    <p class="text-slate-400 text-xs mt-1">This tool adapts to your unique content style based on your video history and preferences.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Output Section -->
+    <div class="card p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mr-4">
+                    <i class="fas fa-file-alt text-green-400 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold text-white">Generated Script</h3>
+                    <p class="text-slate-400">Your AI-crafted content ready for production</p>
+                </div>
+            </div>
+            <div class="flex space-x-2" id="script-actions" style="display: none;">
+                <button class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 transition-colors duration-200" title="Copy to clipboard" id="copy-script">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 hover:bg-purple-500/30 transition-colors duration-200" title="Download as text file" id="download-script">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div id="script-output" class="bg-slate-800/30 border border-slate-600/50 rounded-xl p-6 min-h-96 max-h-96 overflow-y-auto">
+            <div id="script-placeholder" class="flex flex-col items-center justify-center h-full text-slate-400">
+                <i class="fas fa-file-alt text-6xl mb-4 opacity-30"></i>
+                <p class="text-lg font-medium mb-2">Your generated script will appear here</p>
+                <p class="text-sm text-center">Enter a topic and click "Generate Script" to get started with AI-powered content creation.</p>
+            </div>
+            <pre id="script-text" class="hidden whitespace-pre-wrap font-sans text-slate-200 leading-relaxed"></pre>
+        </div>
+        
+        <!-- Script Analysis -->
+        <div id="script-analysis" class="hidden mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-clock text-blue-400 mr-2"></i>
+                    <span class="text-slate-300 text-sm font-medium">Est. Duration</span>
+                </div>
+                <p class="text-white font-semibold" id="estimated-duration">-</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-text-width text-green-400 mr-2"></i>
+                    <span class="text-slate-300 text-sm font-medium">Word Count</span>
+                </div>
+                <p class="text-white font-semibold" id="word-count">-</p>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-chart-line text-purple-400 mr-2"></i>
+                    <span class="text-slate-300 text-sm font-medium">Engagement</span>
+                </div>
+                <p class="text-white font-semibold" id="engagement-potential">High</p>
+            </div>
+        </div>
+        
+        <!-- Suggestions Box -->
+        <div id="script-suggestions" class="hidden mt-6 p-6 rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30">
+            <div class="flex items-start">
+                <i class="fas fa-lightbulb text-yellow-400 mr-3 mt-1"></i>
+                <div>
+                    <h4 class="text-yellow-300 font-semibold mb-2">AI Suggestions</h4>
+                    <p id="suggestions-text" class="text-slate-300 text-sm leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Scripts Section -->
+<div id="recent-scripts" class="mt-8 card p-6">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-semibold text-white">Recent Scripts</h3>
+        <button class="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors duration-200">
+            View All
+        </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:border-blue-500/30 transition-colors duration-200 cursor-pointer">
+            <h4 class="text-white font-medium mb-2">5 Minute Morning Routine</h4>
+            <p class="text-slate-400 text-sm mb-3">Generated 2 hours ago</p>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-blue-400">158 words</span>
+                <span class="text-green-400">60s duration</span>
+            </div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:border-purple-500/30 transition-colors duration-200 cursor-pointer">
+            <h4 class="text-white font-medium mb-2">Photography Tips</h4>
+            <p class="text-slate-400 text-sm mb-3">Generated yesterday</p>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-blue-400">203 words</span>
+                <span class="text-green-400">90s duration</span>
+            </div>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 hover:border-orange-500/30 transition-colors duration-200 cursor-pointer">
+            <h4 class="text-white font-medium mb-2">Healthy Meal Prep</h4>
+            <p class="text-slate-400 text-sm mb-3">Generated 3 days ago</p>
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-blue-400">186 words</span>
+                <span class="text-green-400">75s duration</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Advanced options toggle
+document.getElementById('advanced-toggle').addEventListener('click', function() {
+    const options = document.getElementById('advanced-options');
+    const chevron = document.getElementById('advanced-chevron');
+    
+    if (options.classList.contains('hidden')) {
+        options.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+    } else {
+        options.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+    }
+});
+
+// Script generation
+document.getElementById('script-gen-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const topic = document.getElementById('topic').value;
+    const modelId = document.getElementById('model-select').value;
+    const duration = document.getElementById('duration').value;
+    const tone = document.getElementById('tone').value;
+    
+    const generateButton = document.getElementById('generate-button');
+    const buttonText = document.getElementById('button-text');
+    const buttonSpinner = document.getElementById('button-spinner');
+    const buttonIcon = document.getElementById('button-icon');
+    
+    const scriptPlaceholder = document.getElementById('script-placeholder');
+    const scriptText = document.getElementById('script-text');
+    const scriptActions = document.getElementById('script-actions');
+    const scriptAnalysis = document.getElementById('script-analysis');
+    const suggestionsBox = document.getElementById('script-suggestions');
+    
+    // Show loading state
+    buttonText.textContent = 'Generating...';
+    buttonSpinner.classList.remove('hidden');
+    buttonIcon.classList.add('hidden');
+    generateButton.disabled = true;
+    
+    // Hide previous results
+    scriptPlaceholder.classList.remove('hidden');
+    scriptText.classList.add('hidden');
+    scriptActions.style.display = 'none';
+    scriptAnalysis.classList.add('hidden');
+    suggestionsBox.classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/generate-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                topic: topic,
+                model_id: modelId,
+                duration: duration,
+                tone: tone
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'An unknown error occurred.');
+        }
+
+        const data = await response.json();
+        
+        // Display script
+        scriptPlaceholder.classList.add('hidden');
+        scriptText.classList.remove('hidden');
+        scriptText.textContent = data.script;
+        scriptActions.style.display = 'flex';
+        scriptAnalysis.classList.remove('hidden');
+        
+        // Update analysis
+        updateScriptAnalysis(data.script);
+        
+        // Show suggestions
+        if (data.suggestions) {
+            document.getElementById('suggestions-text').textContent = data.suggestions;
+            suggestionsBox.classList.remove('hidden');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        scriptPlaceholder.classList.add('hidden');
+        scriptText.classList.remove('hidden');
+        scriptText.textContent = `Error: ${error.message}\n\nThis model may not be available in your project. Please try another model or check your IBM Cloud account.`;
+        scriptText.style.color = '#f87171';
+    } finally {
+        // Restore button state
+        buttonText.textContent = 'Generate Script';
+        buttonSpinner.classList.add('hidden');
+        buttonIcon.classList.remove('hidden');
+        generateButton.disabled = false;
+    }
+});
+
+function updateScriptAnalysis(script) {
+    const wordCount = script.split(/\s+/).length;
+    const estimatedDuration = Math.ceil(wordCount / 150 * 60); // Assuming 150 words per minute
+    
+    document.getElementById('word-count').textContent = wordCount;
+    document.getElementById('estimated-duration').textContent = `${estimatedDuration}s`;
+    
+    // Simple engagement calculation based on script length and structure
+    let engagement = 'Medium';
+    if (script.includes('?') && script.includes('!') && wordCount > 100) {
+        engagement = 'High';
+    } else if (wordCount < 50) {
+        engagement = 'Low';
+    }
+    document.getElementById('engagement-potential').textContent = engagement;
+}
+
+// Copy script functionality
+document.getElementById('copy-script').addEventListener('click', async function() {
+    const scriptText = document.getElementById('script-text').textContent;
+    try {
+        await navigator.clipboard.writeText(scriptText);
+        this.innerHTML = '<i class="fas fa-check"></i>';
+        this.classList.remove('text-blue-400', 'bg-blue-500/20');
+        this.classList.add('text-green-400', 'bg-green-500/20');
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-copy"></i>';
+            this.classList.remove('text-green-400', 'bg-green-500/20');
+            this.classList.add('text-blue-400', 'bg-blue-500/20');
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy script:', err);
+    }
+});
+
+// Download script functionality
+document.getElementById('download-script').addEventListener('click', function() {
+    const scriptText = document.getElementById('script-text').textContent;
+    const topic = document.getElementById('topic').value;
+    const blob = new Blob([scriptText], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = `script-${topic.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+});
+
+// Recent scripts interaction
+document.querySelectorAll('#recent-scripts .cursor-pointer').forEach(card => {
+    card.addEventListener('click', function() {
+        // Simulate loading a previous script
+        this.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+            this.style.transform = 'scale(1)';
+        }, 100);
+    });
+});
+</script>
+{% endblock %}</i

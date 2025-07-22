@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Alice Insight Suite{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            background-color: #0f172a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+        
+        .sidebar { 
+            background-color: #1e293b;
+            border-right: 1px solid #334155;
+        }
+        
+        .main-content { 
+            background-color: #0f172a;
+        }
+        
+        .card { 
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            border-color: #475569;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        
+        .nav-link {
+            transition: all 0.15s ease;
+            border-radius: 6px;
+        }
+        
+        .nav-link:hover {
+            background-color: #334155;
+        }
+        
+        .nav-link.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-primary:disabled {
+            background-color: #64748b;
+            cursor: not-allowed;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        
+        /* Loading animation */
+        .loading-dots {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+        
+        .loading-dots div {
+            position: absolute;
+            top: 33px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #3b82f6;
+            animation-timing-function: cubic-bezier(0, 1, 1, 0);
+        }
+        
+        .loading-dots div:nth-child(1) {
+            left: 8px;
+            animation: loading-dots1 0.6s infinite;
+        }
+        
+        .loading-dots div:nth-child(2) {
+            left: 8px;
+            animation: loading-dots2 0.6s infinite;
+        }
+        
+        .loading-dots div:nth-child(3) {
+            left: 32px;
+            animation: loading-dots2 0.6s infinite;
+        }
+        
+        .loading-dots div:nth-child(4) {
+            left: 56px;
+            animation: loading-dots3 0.6s infinite;
+        }
+        
+        @keyframes loading-dots1 {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes loading-dots3 {
+            0% { transform: scale(1); }
+            100% { transform: scale(0); }
+        }
+        
+        @keyframes loading-dots2 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(24px, 0); }
+        }
+    </style>
+</head>
+<body class="flex h-screen bg-slate-900 text-white">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 p-6 flex flex-col justify-between">
+        <div>
+            <!-- Logo Section -->
+            <div class="mb-8 pb-4 border-b border-slate-600">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-chart-bar text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-white">Alice Insight Suite</h1>
+                        <p class="text-slate-400 text-xs">Analytics Platform</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="/" class="nav-link flex items-center text-slate-300 hover:text-white p-3 rounded-md">
+                            <i class="fas fa-home w-5 mr-3 text-slate-400"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/sentiment-analyzer" class="nav-link flex items-center text-slate-300 hover:text-white p-3 rounded-md">
+                            <i class="fas fa-chart-pie w-5 mr-3 text-slate-400"></i>
+                            <span>Sentiment Analysis</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/theme-clustering" class="nav-link flex items-center text-slate-300 hover:text-white p-3 rounded-md">
+                            <i class="fas fa-project-diagram w-5 mr-3 text-slate-400"></i>
+                            <span>Theme Clustering</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/competitor-dashboard" class="nav-link flex items-center text-slate-300 hover:text-white p-3 rounded-md">
+                            <i class="fas fa-tachometer-alt w-5 mr-3 text-slate-400"></i>
+                            <span>Competitor Analysis</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/script-helper" class="nav-link flex items-center text-slate-300 hover:text-white p-3 rounded-md">
+                            <i class="fas fa-edit w-5 mr-3 text-slate-400"></i>
+                            <span>Content Generator</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        
+        <!-- Bottom Section -->
+        <div class="border-t border-slate-600 pt-4">
+            <div class="flex items-center justify-between text-sm text-slate-400">
+                <div class="flex items-center">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span>System Online</span>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+                Powered by IBM Watson
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content flex-1 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <header class="bg-slate-800 border-b border-slate-600 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-semibold text-white">{% block header %}{% endblock %}</h2>
+                    <p class="text-slate-400 text-sm mt-1">{% block subtitle %}{% endblock %}</p>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Search -->
+                    <div class="relative">
+                        <input type="text" placeholder="Search..." class="bg-slate-700 border border-slate-600 rounded-md px-3 py-2 pl-10 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-slate-400 text-sm"></i>
+                    </div>
+                    
+                    <!-- Notifications -->
+                    <div class="relative">
+                        <button class="w-9 h-9 rounded-md bg-slate-700 flex items-center justify-center border border-slate-600 hover:bg-slate-600">
+                            <i class="fas fa-bell text-slate-300 text-sm"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- User Menu -->
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-semibold">A</span>
+                        </div>
+                        <span class="text-slate-300 text-sm">Admin</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content Area -->
+        <div class="flex-1 p-6 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 hidden">
+        <div class="text-center">
+            <div class="loading-dots mb-4">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <p class="text-white font-medium">Processing request...</p>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+    
+    <script>
+        // Set active navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+        });
+        
+        // Global loading functions
+        window.showLoading = function() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        };
+        
+        window.hideLoading = function() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        };
+    </script>
+</body>
+</html>

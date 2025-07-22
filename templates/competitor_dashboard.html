@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}Competitor Dashboard{% endblock %}
+{% block header %}Competitor Insight Dashboard{% endblock %}
+{% block subtitle %}Track and analyze your competition with intelligent insights{% endblock %}
+
+{% block content %}
+<!-- Input Section -->
+<div class="card p-8 mb-8">
+    <div class="flex items-center mb-6">
+        <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mr-4">
+            <i class="fas fa-tachometer-alt text-orange-400 text-xl"></i>
+        </div>
+        <div>
+            <h3 class="text-2xl font-semibold text-white">Competitor Analysis</h3>
+            <p class="text-slate-400">Monitor competitor performance and sentiment trends</p>
+        </div>
+    </div>
+    
+    <form id="competitor-form" class="api-form">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <label for="competitor-usernames" class="block text-lg font-medium text-white mb-3">
+                    Competitor Channel Names or URLs
+                </label>
+                <div class="relative">
+                    <input type="text" id="competitor-usernames" 
+                           class="w-full p-4 pl-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200" 
+                           placeholder="competitor1, competitor2, competitor3" required>
+                    <i class="fas fa-users absolute left-4 top-5 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500 text-sm mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Enter channel names or URLs separated by commas. We'll analyze their latest metrics.
+                </p>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                        class="btn-primary px-8 py-4 rounded-xl text-white font-semibold hover:shadow-lg transform transition-all duration-200 flex items-center">
+                    <span id="track-button-text">Track Competitors</span>
+                    <i id="track-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                    <i class="fas fa-search ml-2" id="track-icon"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div id="competitor-results" class="hidden">
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-chart-bar text-blue-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="avg-subscribers">0</h3>
+            <p class="text-slate-400 text-sm">Avg Subscribers</p>
+        </div>
+        
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-trending-up text-green-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="avg-engagement">0%</h3>
+            <p class="text-slate-400 text-sm">Avg Engagement</p>
+        </div>
+        
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-heart text-purple-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="positive-sentiment">0%</h3>
+            <p class="text-slate-400 text-sm">Positive Sentiment</p>
+        </div>
+        
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-users text-orange-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="competitors-tracked">0</h3>
+            <p class="text-slate-400 text-sm">Competitors Tracked</p>
+        </div>
+    </div>
+    
+    <!-- Competitor Cards Grid -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-white">Competitor Overview</h3>
+            <div class="flex space-x-2">
+                <button class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 transition-colors duration-200" title="Export data" id="export-competitors">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 hover:bg-purple-500/30 transition-colors duration-200" title="Refresh data" id="refresh-competitors">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+        <div id="competitor-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Competitor cards will be inserted here -->
+        </div>
+    </div>
+    
+    <!-- Competitive Analysis -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Performance Comparison -->
+        <div class="card p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-chart-line text-blue-400 mr-2"></i>
+                Performance Comparison
+            </h3>
+            <div class="space-y-4" id="performance-comparison">
+                <p class="text-slate-400 text-center py-8">Complete analysis to see performance comparison</p>
+            </div>
+        </div>
+        
+        <!-- Strategic Insights -->
+        <div class="card p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
+                Strategic Insights
+            </h3>
+            <div id="strategic-insights" class="space-y-3 text-sm text-slate-300">
+                <p>Complete analysis to see strategic insights...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('competitor-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const usernames = document.getElementById('competitor-usernames').value.split(',').map(s => s.trim());
+    const resultsDiv = document.getElementById('competitor-results');
+    const trackButton = document.querySelector('#competitor-form button[type="submit"]');
+    const buttonText = document.getElementById('track-button-text');
+    const spinner = document.getElementById('track-spinner');
+    const icon = document.getElementById('track-icon');
+    
+    // Reset state
+    resultsDiv.classList.add('hidden');
+    
+    // Show loading state
+    buttonText.textContent = 'Analyzing...';
+    spinner.classList.remove('hidden');
+    icon.classList.add('hidden');
+    trackButton.disabled = true;
+    
+    try {
+        const response = await fetch('/api/analyze-competitors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames: usernames })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Competitor analysis failed. Please check the names/URLs and try again.');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.competitors || data.competitors.length === 0) {
+            throw new Error('No competitor data found. Please verify the channel names/URLs.');
+        }
+        
+        // Display results
+        resultsDiv.classList.remove('hidden');
+        updateSummaryStats(data.competitors);
+        renderCompetitorCards(data.competitors);
+        generatePerformanceComparison(data.competitors);
+        generateStrategicInsights(data.competitors);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        // Restore button state
+        buttonText.textContent = 'Track Competitors';
+        spinner.classList.add('hidden');
+        icon.classList.remove('hidden');
+        trackButton.disabled = false;
+    }
+});
+
+function updateSummaryStats(competitors) {
+    const avgSubs = Math.round(competitors.reduce((sum, comp) => sum + comp.subscribers, 0) / competitors.length);
+    const avgEngagement = (competitors.reduce((sum, comp) => sum + comp.avg_engagement_rate, 0) / competitors.length * 100).toFixed(1);
+    const positiveSentiment = Math.round(competitors.filter(comp => comp.recent_sentiment === 'positive').length / competitors.length * 100);
+    
+    // Format subscriber count
+    const formatSubs = (num) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    };
+    
+    document.getElementById('avg-subscribers').textContent = formatSubs(avgSubs);
+    document.getElementById('avg-engagement').textContent = avgEngagement + '%';
+    document.getElementById('positive-sentiment').textContent = positiveSentiment + '%';
+    document.getElementById('competitors-tracked').textContent = competitors.length;
+    
+    // Animate the stats
+    animateStats();
+}
+
+function animateStats() {
+    const statCards = document.querySelectorAll('#competitor-results .card h3');
+    statCards.forEach((stat, index) => {
+        setTimeout(() => {
+            stat.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                stat.style.transform = 'scale(1)';
+            }, 200);
+        }, index * 150);
+    });
+}
+
+function renderCompetitorCards(competitors) {
+    const container = document.getElementById('competitor-cards-container');
+    container.innerHTML = '';
+    
+    // Define color schemes for different performance levels
+    const getPerformanceColor = (subscribers, engagement) => {
+        const engagementRate = engagement * 100;
+        if (subscribers > 100000 && engagementRate > 5) {
+            return 'from-green-500/20 to-emerald-500/20 border-green-500/30';
+        } else if (subscribers > 50000 || engagementRate > 3) {
+            return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
+        } else {
+            return 'from-purple-500/20 to-pink-500/20 border-purple-500/30';
+        }
+    };
+    
+    const getSentimentIcon = (sentiment) => {
+        switch (sentiment) {
+            case 'positive': return 'fa-smile text-green-400';
+            case 'negative': return 'fa-frown text-red-400';
+            default: return 'fa-meh text-yellow-400';
+        }
+    };
+    
+    competitors.forEach((comp, index) => {
+        const performanceColor = getPerformanceColor(comp.subscribers, comp.avg_engagement_rate);
+        const sentimentIcon = getSentimentIcon(comp.recent_sentiment);
+        
+        const card = document.createElement('div');
+        card.className = `card p-6 cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br ${performanceColor}`;
+        
+        const formatSubscribers = (num) => {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return num.toString();
+        };
+        
+        card.innerHTML = `
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+                    <i class="fas fa-youtube text-white text-xl"></i>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fas ${sentimentIcon}"></i>
+                    <span class="text-xs px-2 py-1 rounded-full bg-white/20 text-white font-medium">
+                        ${comp.recent_sentiment.charAt(0).toUpperCase() + comp.recent_sentiment.slice(1)}
+                    </span>
+                </div>
+            </div>
+            
+            <h4 class="text-xl font-bold text-white mb-4 truncate">${comp.username}</h4>
+            
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-white/70 text-sm">Subscribers</span>
+                    <span class="text-white font-semibold">${formatSubscribers(comp.subscribers)}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/70 text-sm">Avg. Engagement</span>
+                    <span class="text-white font-semibold">${(comp.avg_engagement_rate * 100).toFixed(1)}%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/70 text-sm">Performance</span>
+                    <span class="text-white font-semibold">${getPerformanceLevel(comp)}</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-white/20">
+                <button class="w-full text-sm text-white/80 hover:text-white transition-colors duration-200 flex items-center justify-center">
+                    <i class="fas fa-chart-line mr-2"></i>
+                    View Details
+                </button>
+            </div>
+        `;
+        
+        // Add click handler for detailed view
+        card.addEventListener('click', () => {
+            showCompetitorDetails(comp);
+        });
+        
+        container.appendChild(card);
+        
+        // Stagger animation
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+        
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+    });
+}
+
+function getPerformanceLevel(competitor) {
+    const engagementRate = competitor.avg_engagement_rate * 100;
+    if (competitor.subscribers > 100000 && engagementRate > 5) return 'Excellent';
+    if (competitor.subscribers > 50000 || engagementRate > 3) return 'Good';
+    return 'Average';
+}
+
+function generatePerformanceComparison(competitors) {
+    const container = document.getElementById('performance-comparison');
+    
+    // Sort competitors by subscribers for comparison
+    const sortedCompetitors = [...competitors].sort((a, b) => b.subscribers - a.subscribers);
+    
+    let comparisonHTML = '';
+    sortedCompetitors.forEach((comp, index) => {
+        const rank = index + 1;
+        const rankColor = rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-slate-300' : 'text-orange-400';
+        const subscriberCount = comp.subscribers >= 1000 ? 
+            (comp.subscribers >= 1000000 ? (comp.subscribers / 1000000).toFixed(1) + 'M' : (comp.subscribers / 1000).toFixed(1) + 'K') : 
+            comp.subscribers.toString();
+        
+        comparisonHTML += `
+            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
+                <div class="flex items-center">
+                    <span class="${rankColor} font-bold text-lg mr-3">#${rank}</span>
+                    <span class="text-white font-medium">${comp.username}</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-white font-semibold">${subscriberCount}</div>
+                    <div class="text-slate-400 text-sm">${(comp.avg_engagement_rate * 100).toFixed(1)}% engagement</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = comparisonHTML;
+}
+
+function generateStrategicInsights(competitors) {
+    const container = document.getElementById('strategic-insights');
+    const insights = [];
+    
+    // Calculate metrics for insights
+    const avgSubs = competitors.reduce((sum, comp) => sum + comp.subscribers, 0) / competitors.length;
+    const avgEngagement = competitors.reduce((sum, comp) => sum + comp.avg_engagement_rate, 0) / competitors.length;
+    const positiveCount = competitors.filter(comp => comp.recent_sentiment === 'positive').length;
+    const topPerformer = competitors.reduce((max, comp) => comp.subscribers > max.subscribers ? comp : max);
+    
+    // Generate insights based on data
+    insights.push(`🏆 <strong>${topPerformer.username}</strong> leads with ${topPerformer.subscribers >= 1000 ? (topPerformer.subscribers / 1000).toFixed(0) + 'K' : topPerformer.subscribers} subscribers.`);
+    
+    if (avgEngagement > 0.05) {
+        insights.push('📈 High average engagement rate suggests strong audience connection across competitors.');
+    } else {
+        insights.push('⚠️ Low engagement rates present opportunity for better audience engagement strategies.');
+    }
+    
+    if (positiveCount / competitors.length > 0.7) {
+        insights.push('😊 Majority of competitors maintain positive sentiment - focus on differentiation.');
+    } else {
+        insights.push('💡 Mixed sentiment landscape offers opportunities for positive positioning.');
+    }
+    
+    insights.push('📊 Monitor these metrics regularly to identify trends and opportunities.');
+    insights.push('🎯 Focus on areas where competitors show weakness to gain competitive advantage.');
+    
+    container.innerHTML = insights.map(insight => `<p>${insight}</p>`).join('');
+}
+
+function showCompetitorDetails(competitor) {
+    // Create detailed modal view
+    const modal = createCompetitorModal();
+    modal.innerHTML = `
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-white">${competitor.username}</h3>
+                <button class="text-slate-400 hover:text-white" onclick="closeCompetitorModal()">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div class="text-center p-4 rounded-lg bg-slate-700/30">
+                    <div class="text-2xl font-bold text-white mb-1">${competitor.subscribers >= 1000 ? (competitor.subscribers / 1000).toFixed(1) + 'K' : competitor.subscribers}</div>
+                    <div class="text-slate-400 text-sm">Subscribers</div>
+                </div>
+                <div class="text-center p-4 rounded-lg bg-slate-700/30">
+                    <div class="text-2xl font-bold text-white mb-1">${(competitor.avg_engagement_rate * 100).toFixed(1)}%</div>
+                    <div class="text-slate-400 text-sm">Engagement Rate</div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold text-white mb-3">Recent Sentiment</h4>
+                <div class="flex items-center">
+                    <i class="fas fa-${competitor.recent_sentiment === 'positive' ? 'smile text-green-400' : competitor.recent_sentiment === 'negative' ? 'frown text-red-400' : 'meh text-yellow-400'} mr-2"></i>
+                    <span class="text-white capitalize">${competitor.recent_sentiment}</span>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button class="btn-primary px-6 py-2 rounded-lg" onclick="closeCompetitorModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function createCompetitorModal() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50';
+    modal.id = 'competitor-modal';
+    
+    const content = document.createElement('div');
+    content.className = 'bg-slate-800 rounded-xl max-w-lg w-full mx-4 border border-slate-600';
+    
+    modal.appendChild(content);
+    return content;
+}
+
+function closeCompetitorModal() {
+    const modal = document.getElementById('competitor-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Export functionality
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('export-competitors').addEventListener('click', function() {
+        // Implement export functionality
+        alert('Export functionality would be implemented here');
+    });
+    
+    document.getElementById('refresh-competitors').addEventListener('click', function() {
+        // Refresh the current analysis
+        const form = document.getElementById('competitor-form');
+        if (form) {
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
+});
+</script>
+{% endblock %}
