@@ -487,29 +487,6 @@ function showNotification(message, type = 'info') {
         alert(message); // Fallback
     }
 }
-
-// Jinja2 helper functions (implemented in JavaScript for client-side)
-function getTypeColor(type) {
-    const colors = {
-        sentiment: 'bg-blue-500',
-        clustering: 'bg-purple-500',
-        competitor: 'bg-orange-500',
-        script: 'bg-green-500',
-        calendar: 'bg-emerald-500'
-    };
-    return colors[type] || 'bg-slate-500';
-}
-
-function getTypeIcon(type) {
-    const icons = {
-        sentiment: 'fas fa-chart-pie',
-        clustering: 'fas fa-project-diagram',
-        competitor: 'fas fa-tachometer-alt',
-        script: 'fas fa-edit',
-        calendar: 'fas fa-calendar-alt'
-    };
-    return icons[type] || 'fas fa-file';
-}
 </script>
 {% endblock %}
 

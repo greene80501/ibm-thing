@@ -1,0 +1,6 @@
+# requirements.txt
+Flask
+python-dotenv
+google-api-python-client
+ibm-watson
+requests
