@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Model Explorer{% endblock %}
+{% block header %}Foundation Model Explorer{% endblock %}
+
+{% block content %}
+<div class="card p-6">
+    <div class="flex justify-between items-center mb-4">
+        <p class="text-gray-600">Discover foundation models available in your watsonx.ai project.</p>
+        <div class="flex items-center">
+            <label for="task-filter" class="mr-2 text-gray-700 font-medium">Filter by Task:</label>
+            <select id="task-filter" class="p-2 border border-gray-300 rounded-md">
+                <option value="">All Tasks</option>
+                <!-- Task options will be populated by JavaScript -->
+            </select>
+        </div>
+    </div>
+
+    <div id="loading-indicator" class="text-center p-8 hidden">
+        <p class="text-blue-600 font-semibold">Loading models...</p>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Label</th>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Model ID</th>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Provider</th>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600">Description</th>
+                </tr>
+            </thead>
+            <tbody id="models-table-body">
+                <!-- Model data will be populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const taskFilter = document.getElementById('task-filter');
+    const modelsTableBody = document.getElementById('models-table-body');
+    const loadingIndicator = document.getElementById('loading-indicator');
+
+    // Fetch and populate the task filter dropdown
+    async function fetchTasks() {
+        try {
+            const response = await fetch('/api/list-tasks');
+            if (!response.ok) throw new Error('Failed to fetch tasks');
+            const data = await response.json();
+            
+            data.resources.sort((a, b) => a.label.localeCompare(b.label));
+
+            data.resources.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task.task_id;
+                option.textContent = task.label;
+                taskFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error(error);
+            taskFilter.disabled = true;
+        }
+    }
+
+    // Fetch models and populate the table
+    async function fetchModels(taskId = '') {
+        loadingIndicator.classList.remove('hidden');
+        modelsTableBody.innerHTML = '';
+        
+        let url = '/api/list-models';
+        if (taskId) {
+            url += `?task_id=${taskId}`;
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch models');
+            const data = await response.json();
+
+            if (data.resources.length === 0) {
+                modelsTableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">No models found for this filter.</td></tr>`;
+            } else {
+                data.resources.forEach(model => {
+                    const row = `
+                        <tr class="border-b">
+                            <td class="py-3 px-4 font-bold">${model.label}</td>
+                            <td class="py-3 px-4 font-mono text-sm">${model.model_id}</td>
+                            <td class="py-3 px-4">${model.provider}</td>
+                            <td class="py-3 px-4 text-sm text-gray-600">${model.short_description}</td>
+                        </tr>
+                    `;
+                    modelsTableBody.innerHTML += row;
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            modelsTableBody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-600">Error loading models. Check console for details.</td></tr>`;
+        } finally {
+            loadingIndicator.classList.add('hidden');
+        }
+    }
+
+    // Event listener for the filter
+    taskFilter.addEventListener('change', () => {
+        fetchModels(taskFilter.value);
+    });
+
+    // Initial load
+    fetchTasks();
+    fetchModels();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Competitor Dashboard{% endblock %}
+{% block header %}Competitor Insight Dashboard{% endblock %}
+{% block subtitle %}Track and analyze your competition with intelligent insights{% endblock %}
+
+{% block content %}
+<!-- Input Section -->
+<div class="card p-8 mb-8">
+    <div class="flex items-center mb-6">
+        <div class="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mr-4">
+            <i class="fas fa-tachometer-alt text-orange-400 text-xl"></i>
+        </div>
+        <div>
+            <h3 class="text-2xl font-semibold text-white">Competitor Analysis</h3>
+            <p class="text-slate-400">Monitor competitor performance and sentiment trends</p>
+        </div>
+    </div>
+    
+    <form id="competitor-form" class="api-form">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <label for="competitor-urls" class="block text-lg font-medium text-white mb-3">
+                    Competitor Channel URLs
+                </label>
+                <div class="relative">
+                    <input type="text" id="competitor-urls" 
+                           class="w-full p-4 pl-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                           placeholder="https://youtube.com/@mkbhd, https://youtube.com/@LinusTechTips" required>
+                    <i class="fas fa-users absolute left-4 top-5 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500 text-sm mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Enter full channel URLs separated by commas. Use @username or channel/ID format.
+                </p>
+                
+                <!-- Test Buttons for Easy Testing -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <p class="w-full text-slate-400 text-sm mb-2">Quick Test Options:</p>
+                    <button type="button" onclick="fillTestUrls('tech')" class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded text-sm hover:bg-blue-500/30 transition-colors">
+                        Tech Channels
+                    </button>
+                    <button type="button" onclick="fillTestUrls('gaming')" class="px-3 py-1 bg-purple-500/20 text-purple-300 rounded text-sm hover:bg-purple-500/30 transition-colors">
+                        Gaming Channels  
+                    </button>
+                    <button type="button" onclick="fillTestUrls('cooking')" class="px-3 py-1 bg-green-500/20 text-green-300 rounded text-sm hover:bg-green-500/30 transition-colors">
+                        Cooking Channels
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                        class="btn-primary px-8 py-4 rounded-xl text-white font-semibold hover:shadow-lg flex items-center">
+                    <span id="track-button-text">Track Competitors</span>
+                    <i id="track-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div id="competitor-results" class="hidden">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="card p-6 text-center">
+            <h3 class="text-2xl font-bold text-white mb-1" id="avg-subscribers">0</h3>
+            <p class="text-slate-400 text-sm">Avg Subscribers</p>
+        </div>
+        <div class="card p-6 text-center">
+            <h3 class="text-2xl font-bold text-white mb-1" id="avg-engagement">0%</h3>
+            <p class="text-slate-400 text-sm">Avg Engagement</p>
+        </div>
+        <div class="card p-6 text-center">
+            <h3 class="text-2xl font-bold text-white mb-1" id="positive-sentiment">0%</h3>
+            <p class="text-slate-400 text-sm">Positive Sentiment</p>
+        </div>
+        <div class="card p-6 text-center">
+            <h3 class="text-2xl font-bold text-white mb-1" id="competitors-tracked">0</h3>
+            <p class="text-slate-400 text-sm">Competitors Tracked</p>
+        </div>
+    </div>
+    
+    <div class="mb-8">
+        <h3 class="text-2xl font-bold text-white mb-6">Competitor Overview</h3>
+        <div id="competitor-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="card p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-chart-line text-blue-400 mr-2"></i> 
+                Performance Ranking (by Subscribers)
+            </h3>
+            <div class="space-y-4" id="performance-comparison"></div>
+        </div>
+        <div class="card p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">
+                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i> 
+                Strategic Insights
+            </h3>
+            <div id="strategic-insights" class="space-y-3 text-sm text-slate-300"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Test URL sets for easy testing
+function fillTestUrls(category) {
+    const urlInput = document.getElementById('competitor-urls');
+    const testUrls = {
+        tech: 'https://youtube.com/@mkbhd, https://youtube.com/@LinusTechTips, https://youtube.com/@UnboxTherapy',
+        gaming: 'https://youtube.com/@PewDiePie, https://youtube.com/@MrBeast6000, https://youtube.com/@Markiplier',
+        cooking: 'https://youtube.com/@BingingwithBabish, https://youtube.com/@BonAppetitMag, https://youtube.com/@TastyOfficial'
+    };
+    urlInput.value = testUrls[category] || testUrls.tech;
+}
+
+document.getElementById('competitor-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const urlsInput = document.getElementById('competitor-urls').value;
+    const urls = urlsInput.split(',').map(s => s.trim()).filter(s => s);
+    
+    if(urls.length === 0) {
+        window.showNotification('Please enter at least one competitor URL.', 'warning');
+        return;
+    }
+
+    // Validate URLs
+    const validUrls = [];
+    const invalidUrls = [];
+    
+    urls.forEach(url => {
+        if (url.includes('youtube.com') && (url.includes('/@') || url.includes('/channel/') || url.includes('/c/'))) {
+            validUrls.push(url);
+        } else {
+            invalidUrls.push(url);
+        }
+    });
+
+    if (invalidUrls.length > 0) {
+        window.showNotification(`Invalid URLs detected: ${invalidUrls.join(', ')}. Please use full YouTube channel URLs.`, 'error');
+        return;
+    }
+
+    const resultsDiv = document.getElementById('competitor-results');
+    const trackButton = document.querySelector('#competitor-form button[type="submit"]');
+    const buttonText = document.getElementById('track-button-text');
+    const spinner = document.getElementById('track-spinner');
+    
+    resultsDiv.classList.add('hidden');
+    buttonText.textContent = 'Analyzing...';
+    spinner.classList.remove('hidden');
+    trackButton.disabled = true;
+    
+    try {
+        // Use the enhanced apiRequest function from main.js if available, otherwise fallback to fetch
+        let data;
+        if (window.apiRequest) {
+            data = await window.apiRequest('/api/analyze-competitors', {
+                method: 'POST',
+                data: { channel_urls: validUrls },
+                showLoading: false, // We handle loading ourselves
+                loadingText: 'Analyzing competitors...'
+            });
+        } else {
+            // Fallback to regular fetch
+            const response = await fetch('/api/analyze-competitors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel_urls: validUrls })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Competitor analysis failed.');
+            }
+            
+            data = await response.json();
+        }
+        
+        if (!data.competitors || data.competitors.length === 0) {
+            throw new Error('No competitor data found. Please check the URLs and try again.');
+        }
+        
+        resultsDiv.classList.remove('hidden');
+        updateSummaryStats(data.competitors);
+        renderCompetitorCards(data.competitors);
+        generatePerformanceComparison(data.competitors);
+        generateStrategicInsights(data.competitors);
+
+        if (data.errors && data.errors.length > 0) {
+            window.showNotification(`Analysis completed with some warnings: ${data.errors.slice(0, 2).join(', ')}`, 'warning');
+        } else {
+            window.showNotification('Competitor analysis complete!', 'success');
+        }
+        
+    } catch (error) {
+        console.error('Competitor analysis error:', error);
+        window.showNotification(error.message, 'error');
+    } finally {
+        buttonText.textContent = 'Track Competitors';
+        spinner.classList.add('hidden');
+        trackButton.disabled = false;
+    }
+});
+
+function formatNum(num) {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+}
+
+function updateSummaryStats(competitors) {
+    const totalSubs = competitors.reduce((sum, c) => sum + (c.subscribers || 0), 0);
+    const totalEngagement = competitors.reduce((sum, c) => sum + (c.avg_engagement_rate || 0), 0);
+    const positiveCount = competitors.filter(c => c.recent_sentiment === 'positive').length;
+
+    document.getElementById('avg-subscribers').textContent = formatNum(Math.round(totalSubs / competitors.length));
+    document.getElementById('avg-engagement').textContent = `${(totalEngagement / competitors.length * 100).toFixed(2)}%`;
+    document.getElementById('positive-sentiment').textContent = `${Math.round(positiveCount / competitors.length * 100)}%`;
+    document.getElementById('competitors-tracked').textContent = competitors.length;
+}
+
+function renderCompetitorCards(competitors) {
+    const container = document.getElementById('competitor-cards-container');
+    container.innerHTML = '';
+    
+    const sentimentIcons = { 
+        positive: 'fa-smile text-green-400', 
+        neutral: 'fa-meh text-yellow-400', 
+        negative: 'fa-frown text-red-400' 
+    };
+
+    competitors.forEach(comp => {
+        const card = document.createElement('div');
+        card.className = 'card p-6 transform hover:-translate-y-1 transition-transform duration-300';
+        
+        // Use fallback thumbnail if not provided
+        const thumbnail = comp.thumbnail || 'https://yt3.googleusercontent.com/ytc/default-avatar.jpg';
+        
+        card.innerHTML = `
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center min-w-0 flex-1">
+                    <img src="${thumbnail}" 
+                         alt="${comp.username}" 
+                         class="w-10 h-10 rounded-full mr-3 object-cover"
+                         onerror="this.src='https://via.placeholder.com/40x40/64748b/ffffff?text=${comp.username.charAt(0).toUpperCase()}'">
+                    <h4 class="text-lg font-bold text-white truncate">${comp.username}</h4>
+                </div>
+                <a href="${comp.url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs ml-2 flex-shrink-0">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Subscribers</span>
+                    <span class="text-white font-semibold">${formatNum(comp.subscribers || 0)}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-slate-400 text-sm">Avg. Engagement</span>
+                    <span class="text-white font-semibold">${((comp.avg_engagement_rate || 0) * 100).toFixed(2)}%</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-sm">
+                <span class="text-slate-400">Recent Sentiment</span>
+                <div class="flex items-center">
+                    <i class="fas ${sentimentIcons[comp.recent_sentiment] || sentimentIcons.neutral} mr-2"></i>
+                    <span class="text-white capitalize">${comp.recent_sentiment || 'neutral'}</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function generatePerformanceComparison(competitors) {
+    const container = document.getElementById('performance-comparison');
+    container.innerHTML = '';
+    
+    // Sort by subscribers (already sorted from backend, but ensure it)
+    const sortedCompetitors = [...competitors].sort((a, b) => (b.subscribers || 0) - (a.subscribers || 0));
+    
+    sortedCompetitors.forEach((comp, index) => {
+        const rankColors = ['text-yellow-400', 'text-slate-300', 'text-orange-400'];
+        const rankColor = rankColors[index] || 'text-slate-400';
+        
+        const thumbnail = comp.thumbnail || 'https://via.placeholder.com/32x32/64748b/ffffff?text=' + comp.username.charAt(0).toUpperCase();
+        
+        container.innerHTML += `
+            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors">
+                <div class="flex items-center">
+                    <span class="${rankColor} font-bold text-lg mr-4 w-6 text-center">#${index + 1}</span>
+                    <img src="${thumbnail}" 
+                         class="w-8 h-8 rounded-full mr-3 object-cover"
+                         onerror="this.src='https://via.placeholder.com/32x32/64748b/ffffff?text=${comp.username.charAt(0).toUpperCase()}'">
+                    <span class="text-white font-medium">${comp.username}</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-white font-semibold">${formatNum(comp.subscribers || 0)}</div>
+                    <div class="text-slate-400 text-xs">${((comp.avg_engagement_rate || 0) * 100).toFixed(2)}% eng.</div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function generateStrategicInsights(competitors) {
+    const container = document.getElementById('strategic-insights');
+    let insights = [];
+    
+    if (competitors.length < 2) {
+        container.innerHTML = '<p class="text-slate-400">Add at least two competitors for detailed strategic insights.</p>';
+        return;
+    }
+
+    // Sort by subscribers and engagement
+    const topSub = [...competitors].sort((a, b) => (b.subscribers || 0) - (a.subscribers || 0))[0];
+    const topEngage = [...competitors].sort((a, b) => (b.avg_engagement_rate || 0) - (a.avg_engagement_rate || 0))[0];
+
+    insights.push(`<strong>${topSub.username}</strong> leads in subscriber count with ${formatNum(topSub.subscribers || 0)} subscribers, setting the market benchmark.`);
+    
+    if (topEngage.username !== topSub.username) {
+        insights.push(`While smaller, <strong>${topEngage.username}</strong> shows the highest engagement rate (${((topEngage.avg_engagement_rate || 0) * 100).toFixed(2)}%), indicating strong audience loyalty. Study their content strategy.`);
+    } else {
+        insights.push(`<strong>${topSub.username}</strong> dominates both reach and engagement, showcasing excellent audience connection.`);
+    }
+
+    const avgSubs = competitors.reduce((sum, c) => sum + (c.subscribers || 0), 0) / competitors.length;
+    const belowAverage = competitors.filter(c => (c.subscribers || 0) < avgSubs);
+    
+    if (belowAverage.length > 0) {
+        insights.push(`${belowAverage.length} competitor(s) have below-average subscriber counts, representing potential opportunities for growth.`);
+    }
+
+    const positiveSentimentCount = competitors.filter(c => c.recent_sentiment === 'positive').length;
+    if (positiveSentimentCount / competitors.length > 0.6) {
+        insights.push(`${Math.round(positiveSentimentCount / competitors.length * 100)}% of competitors enjoy positive sentiment. Focus on unique value propositions to differentiate.`);
+    } else if (positiveSentimentCount / competitors.length < 0.4) {
+        insights.push(`Opportunity detected: Only ${Math.round(positiveSentimentCount / competitors.length * 100)}% have positive sentiment. Exceptional content could capture market share.`);
+    }
+
+    container.innerHTML = insights.map(insight => 
+        `<p class="flex items-start"><i class="fas fa-check-circle text-green-400 mr-2 mt-1 flex-shrink-0"></i><span>${insight}</span></p>`
+    ).join('');
+}
+
+// Add notification fallback if not available globally
+if (typeof window.showNotification !== 'function') {
+    window.showNotification = function(message, type) {
+        console.log(`${type.toUpperCase()}: ${message}`);
+        alert(message);
+    };
+}
+</script>
+{% endblock %}

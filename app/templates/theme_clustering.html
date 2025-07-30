@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Theme Clustering{% endblock %}
+{% block header %}Theme Clustering Engine{% endblock %}
+{% block subtitle %}Discover hidden patterns in your audience conversations{% endblock %}
+
+{% block content %}
+<!-- Input Section -->
+<div class="card p-8 mb-8">
+    <div class="flex items-center mb-6">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mr-4">
+            <i class="fas fa-project-diagram text-purple-400 text-xl"></i>
+        </div>
+        <div>
+            <h3 class="text-2xl font-semibold text-white">Thematic Analysis</h3>
+            <p class="text-slate-400">Uncover key themes and emerging patterns in video comments</p>
+        </div>
+    </div>
+    
+    <form id="clustering-form" class="api-form">
+        <div class="flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <label for="video-url-cluster" class="block text-lg font-medium text-white mb-3">YouTube Video URL</label>
+                <div class="relative">
+                    <input type="url" id="video-url-cluster" 
+                           class="w-full p-4 pl-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200" 
+                           placeholder="https://www.youtube.com/watch?v=..." required>
+                    <i class="fas fa-link absolute left-4 top-5 text-slate-400"></i>
+                </div>
+                <p class="text-slate-500 text-sm mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    We'll analyze up to 80 comments to identify thematic clusters and outliers
+                </p>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                        class="btn-primary px-8 py-4 rounded-xl text-white font-semibold hover:shadow-lg transform transition-all duration-200 flex items-center">
+                    <span id="cluster-button-text">Find Themes</span>
+                    <i id="cluster-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                    <i class="fas fa-search ml-2" id="cluster-icon"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results Section -->
+<div id="clustering-results" class="hidden">
+    <!-- Summary Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-layer-group text-purple-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="dominant-themes-count">0</h3>
+            <p class="text-slate-400 text-sm">Dominant Themes</p>
+        </div>
+        
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-star text-yellow-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="emerging-themes-count">0</h3>
+            <p class="text-slate-400 text-sm">Emerging Themes</p>
+        </div>
+        
+        <div class="card p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-3">
+                <i class="fas fa-comments text-blue-400 text-xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-1" id="total-analyzed">0</h3>
+            <p class="text-slate-400 text-sm">Comments Analyzed</p>
+        </div>
+    </div>
+    
+    <!-- Dominant Themes -->
+    <div class="mb-10">
+        <h3 class="text-2xl font-bold text-white mb-6">Dominant Themes</h3>
+        <div id="clusters-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+    
+    <!-- Outliers & Emerging Themes -->
+    <div>
+        <h3 class="text-2xl font-bold text-white mb-6">Outliers & Emerging Themes</h3>
+        <div id="outliers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+    
+    <!-- Insights Panel -->
+    <div class="mt-10 card p-6">
+        <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-brain text-blue-400 mr-2"></i>AI Insights</h3>
+        <div id="theme-insights" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="key-insights" class="space-y-3 text-sm text-slate-300"></div>
+            <div id="content-recommendations" class="space-y-3 text-sm text-slate-300"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Theme Details Modal -->
+<div id="theme-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-800 rounded-xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden border border-slate-600 flex flex-col">
+        <div class="p-4 border-b border-slate-600 flex items-center justify-between flex-shrink-0">
+            <h3 class="text-lg font-bold text-white" id="modal-theme-title">Theme Details</h3>
+            <button id="close-theme-modal" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="p-6 overflow-y-auto" id="modal-theme-comments">
+            <!-- Comments will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentThemeData = null; // Store the full API response
+
+document.getElementById('clustering-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const videoUrl = document.getElementById('video-url-cluster').value;
+    const resultsDiv = document.getElementById('clustering-results');
+    const clusterButton = document.querySelector('#clustering-form button[type="submit"]');
+    
+    resultsDiv.classList.add('hidden');
+    clusterButton.disabled = true;
+    clusterButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...`;
+    
+    try {
+        const response = await fetch("{{ url_for('routes.cluster_themes') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_url: videoUrl })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Theme clustering failed.');
+        
+        currentThemeData = data; // Save data for modal
+        resultsDiv.classList.remove('hidden');
+        updateStatistics(data);
+        renderThemes('clusters-container', data.clusters, 'cluster');
+        renderThemes('outliers-container', data.outliers, 'outlier');
+        generateInsights(data);
+        
+    } catch (error) {
+        window.showNotification(error.message, 'error');
+    } finally {
+        clusterButton.disabled = false;
+        clusterButton.innerHTML = `<span id="cluster-button-text">Find Themes</span><i class="fas fa-search ml-2" id="cluster-icon"></i>`;
+    }
+});
+
+function updateStatistics(data) {
+    document.getElementById('dominant-themes-count').textContent = data.clusters?.length || 0;
+    document.getElementById('emerging-themes-count').textContent = data.outliers?.length || 0;
+    document.getElementById('total-analyzed').textContent = data.total_analyzed || 0;
+}
+
+function renderThemes(containerId, themes, type) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (!themes || themes.length === 0) {
+        container.innerHTML = `<p class="text-slate-500 italic md:col-span-3">No ${type}s found.</p>`;
+        return;
+    }
+
+    const cardStyles = {
+        cluster: { gradient: 'from-blue-500/20 to-cyan-500/20', icon: 'fa-layer-group', iconBg: 'bg-white/10' },
+        outlier: { gradient: 'from-yellow-500/10 to-orange-500/10', icon: 'fa-star', iconBg: 'bg-yellow-500/20' }
+    };
+
+    themes.forEach((theme, index) => {
+        const style = cardStyles[type];
+        const card = document.createElement('div');
+        card.className = `card p-6 cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br ${style.gradient}`;
+        // Add data attributes to identify the theme on click
+        card.dataset.themeName = theme.summary;
+        card.dataset.themeType = type;
+        
+        card.innerHTML = `
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-12 h-12 rounded-xl ${style.iconBg} flex items-center justify-center"><i class="fas ${style.icon} text-white text-xl"></i></div>
+                <div class="px-2 py-1 rounded-full bg-white/20 text-white text-xs font-semibold">${theme.comments?.length || 0} comments</div>
+            </div>
+            <h4 class="text-lg font-bold text-white mb-3">${theme.summary}</h4>`;
+        container.appendChild(card);
+    });
+}
+
+function generateInsights(data) {
+    const insightsContainer = document.getElementById('key-insights');
+    const recsContainer = document.getElementById('content-recommendations');
+    insightsContainer.innerHTML = '<h4>Key Insights</h4>';
+    recsContainer.innerHTML = '<h4>Content Recommendations</h4>';
+
+    if (data.clusters.length > 3) {
+        insightsContainer.innerHTML += `<p><i class="fas fa-check-circle text-green-400 mr-2"></i>High theme diversity suggests your content appeals to varied interests.</p>`;
+    }
+    if (data.outliers.length > 0) {
+        insightsContainer.innerHTML += `<p><i class="fas fa-check-circle text-green-400 mr-2"></i>Discovered ${data.outliers.length} emerging theme(s) that could be future content opportunities.</p>`;
+    }
+    if (data.clusters.length > 0) {
+        recsContainer.innerHTML += `<p><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Your most dominant theme is "<strong>${data.clusters[0].summary}</strong>". Create a dedicated follow-up video on this topic.</p>`;
+    }
+    if (data.outliers.length > 0) {
+        recsContainer.innerHTML += `<p><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Monitor the outlier theme "<strong>${data.outliers[0].summary}</strong>". If it grows, it could be a viral topic.</p>`;
+    }
+}
+
+// --- Modal Logic ---
+const themeModal = document.getElementById('theme-modal');
+const closeModalBtn = document.getElementById('close-theme-modal');
+
+// Event Delegation for clicking on theme cards
+document.getElementById('clustering-results').addEventListener('click', (e) => {
+    const card = e.target.closest('[data-theme-name]');
+    if (card) {
+        const themeName = card.dataset.themeName;
+        const themeType = card.dataset.themeType;
+        openThemeModal(themeName, themeType);
+    }
+});
+
+function openThemeModal(themeName, themeType) {
+    if (!currentThemeData) return;
+    
+    const themeDataArray = (themeType === 'cluster') ? currentThemeData.clusters : currentThemeData.outliers;
+    const theme = themeDataArray.find(t => t.summary === themeName);
+    
+    if (!theme) return;
+    
+    document.getElementById('modal-theme-title').textContent = `Comments for "${theme.summary}"`;
+    const commentsContainer = document.getElementById('modal-theme-comments');
+    
+    commentsContainer.innerHTML = theme.comments.map(comment => `
+        <div class="p-3 border-b border-slate-700 last:border-b-0">
+            <p class="text-slate-300 text-sm leading-relaxed">${comment}</p>
+        </div>
+    `).join('');
+    
+    themeModal.classList.remove('hidden');
+}
+
+function closeThemeModal() {
+    themeModal.classList.add('hidden');
+}
+
+closeModalBtn.addEventListener('click', closeThemeModal);
+themeModal.addEventListener('click', (e) => {
+    if (e.target === themeModal) {
+        closeThemeModal();
+    }
+});
+</script>
+{% endblock %}

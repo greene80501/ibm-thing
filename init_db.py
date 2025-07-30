@@ -1,9 +1,10 @@
+# File: init_db.py
 import sqlite3
 import bcrypt
 import json
 import random
 
-DATABASE = 'alice_insight.db'
+DATABASE = 'alice_insight.db' # Define the database file name
 
 def initialize_database():
     """
@@ -13,12 +14,10 @@ def initialize_database():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # Drop existing tables to ensure a clean slate
     print("Dropping old tables (if they exist)...")
     cursor.execute('DROP TABLE IF EXISTS analyses')
     cursor.execute('DROP TABLE IF EXISTS users')
 
-    # --- Create Users Table ---
     print("Creating 'users' table...")
     cursor.execute('''
         CREATE TABLE users (
@@ -31,7 +30,6 @@ def initialize_database():
         )
     ''')
 
-    # --- Create Analyses Table ---
     print("Creating 'analyses' table...")
     cursor.execute('''
         CREATE TABLE analyses (
@@ -41,34 +39,23 @@ def initialize_database():
         )
     ''')
     
-    # --- Populate with a Demo User ---
     print("Creating a demo user...")
     email = 'demo@alice.io'
-    password = 'password123' # Simple password for the demo
+    password = 'password123'
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     
-    # Demo channel data
-    channel_url = 'https://www.youtube.com/@demochannel'
-    channel_id = 'mock-channel-id-123'
-    channel_name = 'Alice Demo Channel'
-    channel_thumbnail = 'https://yt3.googleusercontent.com/ytc/AIdro_k-g0_G0Xp-4_f5_Y8Z_g0_G0Xp-4_f5_Y8=s176-c-k-c0x00ffffff-no-rj'
-    
     cursor.execute(
-        '''INSERT INTO users (email, password_hash, channel_url, channel_id, channel_name, channel_subscriber_count, channel_video_count, channel_view_count, channel_thumbnail, channel_description, channel_verified)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (email, password_hash, channel_url, channel_id, channel_name, 125000, 152, 2500000, channel_thumbnail, 'A demo channel for Alice Insight.', 1)
+        'INSERT INTO users (email, password_hash, channel_url, channel_verified) VALUES (?, ?, ?, ?)',
+        (email, password_hash, 'https://www.youtube.com/@demochannel', 1)
     )
     user_id = cursor.lastrowid
     print(f"✅ Demo user created! Email: {email}, Password: {password}")
     
-    # --- Populate with Mock Analysis Data ---
     print("Populating with mock analysis data...")
     mock_analyses = [
-        ('sentiment', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ', 'Sentiment Analysis: Viral Hits', {'sentiment_data': {'positive': 35, 'neutral': 5, 'negative': 2}}, {}),
-        ('theme_cluster', 'https://www.youtube.com/watch?v=3JZ_D3p_fpQ', '3JZ_D3p_fpQ', 'Theme Cluster: Tech Reviews', {'clusters': [{'summary': 'Camera Quality'}, {'summary': 'Battery Life'}]}, {}),
-        ('script', None, None, 'Script: How to Bake a Cake', {'script': 'Start with flour and sugar...'}, {}),
-        ('competitor', None, None, 'Competitor Analysis: Top 3 Rivals', {'competitors': [{'username': 'Rival Channel 1'}]}, {}),
-        ('calendar', None, None, 'Smart Calendar: August Content', {'metrics': {'total_posts': 12}}, {}),
+        ('sentiment', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ', 'Sentiment: Viral Hits', {}, {}),
+        ('theme_cluster', 'https://www.youtube.com/watch?v=3JZ_D3p_fpQ', '3JZ_D3p_fpQ', 'Theme: Tech Reviews', {}, {}),
+        ('script', None, None, 'Script: How to Bake', {}, {}),
     ]
     
     for analysis in mock_analyses:
@@ -81,7 +68,7 @@ def initialize_database():
     conn.commit()
     conn.close()
     
-    print("\nDatabase initialization complete. You can now run the main app.")
+    print("\nDatabase initialization complete.")
 
 if __name__ == '__main__':
     initialize_database()

@@ -1,5 +1,5 @@
 # Enhanced IBM AI-Integrated YouTube Analytics App
-# File: app.py (FINALIZED VERSION - CORRECTED)
+# File: app.py (FINALIZED VERSION - CORRECTED & ENHANCED WITH REAL SENTIMENT ANALYSIS)
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, make_response
 import sqlite3
@@ -15,6 +15,9 @@ import os
 from functools import wraps
 from typing import List, Dict, Optional
 import logging
+# --- NEW IMPORTS for REAL YouTube Data ---
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,19 +30,121 @@ app.secret_key = 'alice-insight-secret-key-change-in-production-2024'
 DATABASE = 'alice_insight.db'
 
 # --- IBM AI Configuration (Placeholders for Demo) ---
-IBM_NLU_API_KEY = "BunpkLiLUfJB4e1-sq1-3P_8f2LqzbqN5Vbe4L2UA9KR"
-IBM_NLU_URL = "https://api.us-south.natural-language-understanding.watson.cloud.ibm.com/instances/dead8d2a-3978-4e15-b413-dab9e0ae7f46"
-IBM_NLU_VERSION = "2022-4-07"
+# IMPORTANT: Replace with your actual IBM NLU API Key and URL
+IBM_NLU_API_KEY = "BunpkLiLUfJB4e1-sq1-3P_8f2LqzbqN5Vbe4L2UA9KR" # Replace with your key
+IBM_NLU_URL = "https://api.us-south.natural-language-understanding.watson.cloud.ibm.com/instances/dead8d2a-3978-4e15-b413-dab9e0ae7f46" # Replace with your URL
+IBM_NLU_VERSION = "2022-04-07"
 
 # watsonx.ai Configuration (Placeholders for Demo)
 WATSONX_API_KEY = "nYQ1gFsdCOfpCL5oOZj3-b18q5-2RsZXTn1JsydVmTbV"
 WATSONX_PROJECT_ID = "a03dfd66-1d06-4458-badb-82229d245571"
 WATSONX_URL = "https://us-south.ml.cloud.ibm.com"
 
-# YouTube API (for future real integration)
-YOUTUBE_API_KEY = "AIzaSyBb0GIb6f6H-uukICrV4KTQMU3FKAuKKwM"
+# --- YouTube API Configuration ---
+# IMPORTANT: Replace with your actual YouTube Data API v3 Key
+YOUTUBE_API_KEY = "AIzaSyBb0GIb6f6H-uukICrV4KTQMU3FKAuKKwM" # Replace with your key
 
-# --- Enhanced IBM AI Service Classes ---
+# ==============================================================================
+# --- NEW: REAL IBM NLU & YOUTUBE DATA SERVICE CLASSES ---
+# ==============================================================================
+
+class IBMNaturalLanguageUnderstanding:
+    """Service to interact with IBM Natural Language Understanding."""
+
+    def __init__(self):
+        self.api_key = IBM_NLU_API_KEY
+        self.service_url = IBM_NLU_URL
+        self.version = IBM_NLU_VERSION
+        self.is_configured = bool(self.api_key and self.service_url)
+
+    def analyze(self, text_to_analyze: str) -> Optional[Dict]:
+        """Analyzes text for sentiment and emotion using IBM NLU."""
+        if not self.is_configured:
+            logger.error("IBM NLU is not configured. Cannot perform analysis.")
+            return None
+
+        url = f"{self.service_url}/v1/analyze?version={self.version}"
+        headers = {"Content-Type": "application/json"}
+        auth = ('apikey', self.api_key)
+        
+        data = {
+            "text": text_to_analyze,
+            "features": {
+                "sentiment": {},
+                "emotion": {}
+            }
+        }
+
+        try:
+            response = requests.post(url, headers=headers, auth=auth, json=data, timeout=15)
+            response.raise_for_status()  # Raises an HTTPError for bad responses (4xx or 5xx)
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error calling IBM NLU API: {e}")
+            logger.error(f"Response Text: {e.response.text if e.response else 'No response'}")
+            return None
+
+# Instantiate the real NLU service
+nlu_service = IBMNaturalLanguageUnderstanding()
+
+
+def extract_video_id(url: str) -> Optional[str]:
+    """Extracts the YouTube video ID from various URL formats."""
+    # Standard watch URL: https://www.youtube.com/watch?v=VIDEO_ID
+    match = re.search(r"watch\?v=([a-zA-Z0-9_-]{11})", url)
+    if match:
+        return match.group(1)
+    # Shortened URL: https://youtu.be/VIDEO_ID
+    match = re.search(r"youtu\.be/([a-zA-Z0-9_-]{11})", url)
+    if match:
+        return match.group(1)
+    # Embed URL: https://www.youtube.com/embed/VIDEO_ID
+    match = re.search(r"embed/([a-zA-Z0-9_-]{11})", url)
+    if match:
+        return match.group(1)
+    return None
+
+
+def get_youtube_comments(video_id: str, max_results: int = 50) -> Optional[List[str]]:
+    """Fetches top-level comments from a YouTube video."""
+    if not YOUTUBE_API_KEY:
+        logger.error("YouTube API Key is not configured.")
+        return None
+        
+    try:
+        youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+        request = youtube.commentThreads().list(
+            part='snippet',
+            videoId=video_id,
+            maxResults=max_results,
+            order='relevance',  # 'relevance' is often better for sentiment than 'time'
+            textFormat='plainText'
+        )
+        response = request.execute()
+
+        comments = []
+        for item in response['items']:
+            comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
+            # Basic cleaning to avoid very short/irrelevant comments
+            if len(comment.strip()) > 10:
+                comments.append(comment)
+        return comments
+
+    except HttpError as e:
+        error_content = json.loads(e.content)
+        error_reason = error_content.get('error', {}).get('errors', [{}])[0].get('reason', 'unknown')
+        logger.error(f"An HTTP error {e.resp.status} occurred: {error_reason}")
+        if error_reason == 'commentsDisabled':
+            raise Exception("Comments are disabled for this video.")
+        elif error_reason == 'videoNotFound':
+            raise Exception("The requested video was not found.")
+        else:
+            raise Exception("An error occurred with the YouTube API. Check your API key and quotas.")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred while fetching comments: {e}")
+        raise e
+
+# --- Enhanced IBM AI Service Classes (watsonx.ai part remains the same) ---
 class IBMWatsonxAI:
     """Enhanced IBM watsonx.ai integration with better error handling."""
     
@@ -185,6 +290,8 @@ class IBMWatsonxAI:
 
 watsonx_ai = IBMWatsonxAI()
 
+
+# --- Database and User Functions (Unchanged) ---
 def init_database():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -300,16 +407,7 @@ def get_channel_info_from_url(url):
         }
     return None
 
-def generate_mock_sentiment():
-    positive = random.randint(20, 30); neutral = random.randint(5, 10); negative = random.randint(2, 5)
-    return {
-        "sentiment_data": {"positive": positive, "neutral": neutral, "negative": negative},
-        "emotion_data": {
-            "joy": random.uniform(0.6, 0.9), "sadness": random.uniform(0.1, 0.3), "anger": random.uniform(0.0, 0.2),
-            "surprise": random.uniform(0.2, 0.4), "fear": random.uniform(0.0, 0.1), "disgust": random.uniform(0.0, 0.1)
-        }, "alert": "High engagement detected!" if (positive + neutral + negative) > 35 else None
-    }
-
+# --- Mock Data Generators (kept for other features) ---
 def generate_mock_themes():
     themes = ["Video Quality", "Sound/Music", "Topic Request", "Presenter's Style", "Technical Question"]
     clusters = [{"summary": f"Discussion about {t}", "comment_ids": [random.randint(1,100) for _ in range(random.randint(5,15))]} for t in random.sample(themes, random.randint(3,5))]
@@ -333,6 +431,7 @@ def generate_mock_videos(count=12):
         })
     return sorted(videos, key=lambda x: x['published_at'], reverse=True)
 
+# Other generation functions remain unchanged...
 def generate_smart_calendar_content(content_goals, platforms, posting_frequency, content_duration):
     freq_map = {'daily': 7, 'frequent': 5, 'regular': 3, 'weekly': 1}
     posts_per_week = freq_map.get(posting_frequency, 5)
@@ -385,6 +484,8 @@ def generate_performance_predictions(metrics, platforms):
     predictions.append({'metric': 'Growth Potential', 'value': growth, 'color': 'yellow', 'icon': 'fas fa-rocket'})
     return predictions
 
+
+# --- Core App Logic (Unchanged) ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -401,12 +502,9 @@ def utility_processor():
     def get_type_color(t): return {'sentiment': 'bg-blue-600/20', 'theme_cluster': 'bg-purple-600/20', 'competitor': 'bg-orange-600/20', 'script': 'bg-red-600/20', 'calendar': 'bg-emerald-600/20'}.get(t, 'bg-slate-600/20')
     return dict(getTypeIcon=get_type_icon, getTypeColor=get_type_color)
 
-# --- Frontend Routes ---
+# --- Frontend Routes (Unchanged) ---
 @app.route('/')
 def index():
-    # *** CHANGE HERE ***
-    # Clear any existing session and redirect to the login page.
-    # This ensures a fresh start for the demo every time the root URL is visited.
     session.clear()
     return redirect(url_for('login'))
 
@@ -474,7 +572,8 @@ def my_channel():
     user_transcripts = [v for v in mock_videos if v['has_transcript']]
     return render_template('my_channel.html', user=user, user_videos=mock_videos, user_transcripts=user_transcripts)
 
-# --- API Authentication Endpoints ---
+
+# --- API Authentication Endpoints (Unchanged) ---
 @app.route('/api/auth/register', methods=['POST'])
 def api_register():
     data = request.get_json()
@@ -510,15 +609,79 @@ def api_login():
         return jsonify({'message': 'Login successful'})
     return jsonify({'error': 'Invalid email or password'}), 401
 
-# --- Mock API Endpoints for Demo ---
+
+# ==============================================================================
+# --- *** REPLACED MOCK API ENDPOINT WITH REAL IMPLEMENTATION *** ---
+# ==============================================================================
 @app.route('/api/analyze-sentiment', methods=['POST'])
 @login_required
 def analyze_sentiment():
-    time.sleep(2)
-    data = generate_mock_sentiment()
-    save_analysis_data(session['user_id'], 'sentiment', request.json.get('video_url'), 'mock_video_id', 'Sentiment Analysis', data, {})
-    return jsonify(data)
+    """
+    Analyzes sentiment of comments from a given YouTube video URL.
+    This is the new, real implementation.
+    """
+    video_url = request.json.get('video_url')
+    if not video_url:
+        return jsonify({'error': 'Video URL is required'}), 400
 
+    video_id = extract_video_id(video_url)
+    if not video_id:
+        return jsonify({'error': 'Invalid YouTube URL provided'}), 400
+
+    try:
+        # Step 1: Fetch comments from YouTube
+        logger.info(f"Fetching comments for video ID: {video_id}")
+        comments = get_youtube_comments(video_id, max_results=50)
+        if not comments:
+            return jsonify({'error': 'Could not retrieve comments for this video. It may have no comments or they are disabled.'}), 404
+        logger.info(f"Fetched {len(comments)} comments.")
+
+        # Step 2: Analyze comments with IBM NLU
+        sentiment_counts = {'positive': 0, 'neutral': 0, 'negative': 0}
+        emotion_totals = {'sadness': 0, 'joy': 0, 'fear': 0, 'disgust': 0, 'anger': 0}
+        analyzed_count = 0
+
+        for comment_text in comments:
+            # Add a small delay to avoid hitting rate limits too quickly in a loop
+            time.sleep(0.1) 
+            analysis_result = nlu_service.analyze(comment_text)
+
+            if analysis_result:
+                analyzed_count += 1
+                # Tally sentiment
+                sentiment_label = analysis_result.get('sentiment', {}).get('document', {}).get('label', 'neutral')
+                sentiment_counts[sentiment_label] += 1
+
+                # Aggregate emotions
+                emotions = analysis_result.get('emotion', {}).get('document', {}).get('emotion', {})
+                for emotion, score in emotions.items():
+                    if emotion in emotion_totals:
+                        emotion_totals[emotion] += score
+        
+        if analyzed_count == 0:
+            return jsonify({'error': 'Could not analyze any comments. Check IBM NLU configuration and API status.'}), 500
+
+        # Step 3: Average the emotion scores
+        final_emotions = {emotion: total / analyzed_count for emotion, total in emotion_totals.items()}
+        
+        # Step 4: Format the response
+        response_data = {
+            "sentiment_data": sentiment_counts,
+            "emotion_data": final_emotions
+        }
+
+        # Step 5: Save the successful analysis
+        save_analysis_data(session['user_id'], 'sentiment', video_url, video_id, f'Real Sentiment Analysis for video {video_id}', response_data, {'comments_analyzed': analyzed_count})
+        
+        logger.info(f"Successfully analyzed {analyzed_count} comments.")
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Sentiment analysis failed: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+# --- Mock API Endpoints for Demo (Unchanged) ---
 @app.route('/api/cluster-themes', methods=['POST'])
 @login_required
 def cluster_themes():
@@ -569,6 +732,7 @@ def generate_calendar_route():
         logger.error(f"Calendar generation error: {e}")
         return jsonify({'error': 'Failed to generate calendar'}), 500
 
+# Other API routes remain unchanged...
 @app.route('/api/verify-channel', methods=['POST'])
 @login_required
 def verify_channel():
@@ -623,6 +787,7 @@ def list_models():
 def list_tasks():
     return jsonify({"resources": [{"label": "Generation", "task_id": "generation"}, {"label": "Classification", "task_id": "classification"}, {"label": "Summarization", "task_id": "summarization"}]})
 
+
 if __name__ == '__main__':
     if not os.path.exists(DATABASE):
         from init_db import initialize_database
@@ -631,5 +796,7 @@ if __name__ == '__main__':
         init_database()
     logger.info("🚀 Alice Insight Suite starting...")
     logger.info(f"🔵 IBM watsonx.ai: {'Available' if watsonx_ai.is_available else 'Fallback mode (DEMO)'}")
+    logger.info(f"🔵 IBM NLU: {'CONFIGURED' if nlu_service.is_configured else 'NOT CONFIGURED'}")
+    logger.info(f"🔵 YouTube API: {'CONFIGURED' if YOUTUBE_API_KEY else 'NOT CONFIGURED'}")
     logger.info(f"🔵 Project ID: {WATSONX_PROJECT_ID}")
     app.run(debug=True, port=5001, host='0.0.0.0')

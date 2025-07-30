@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Alice Insight Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        }
+        
+        .card { 
+            background-color: rgba(30, 41, 59, 0.8);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+        }
+        
+        .input-field {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid #475569;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+        
+        .shape {
+            position: absolute;
+            background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .shape:nth-child(1) { width: 80px; height: 80px; top: 20%; left: 10%; animation-delay: 0s; }
+        .shape:nth-child(2) { width: 60px; height: 60px; top: 70%; right: 10%; animation-delay: 2s; }
+        .shape:nth-child(3) { width: 100px; height: 100px; top: 40%; right: 20%; animation-delay: 4s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden">
+    <div class="floating-shapes">
+        <div class="shape"></div> <div class="shape"></div> <div class="shape"></div>
+    </div>
+    
+    <div class="w-full max-w-md px-6">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4">
+                <i class="fas fa-chart-bar text-white text-2xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+            <p class="text-slate-400">Sign in to Alice Insight Suite</p>
+        </div>
+        
+        <div class="card p-8">
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-white mb-2"><i class="fas fa-envelope mr-2 text-blue-400"></i> Email Address</label>
+                    <input type="email" id="email" name="email" required value="demo@alice.io" class="input-field w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none" placeholder="your@email.com">
+                </div>
+                
+                <div>
+                    <label for="password" class="block text-sm font-medium text-white mb-2"><i class="fas fa-lock mr-2 text-blue-400"></i> Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required value="password123" class="input-field w-full px-4 py-3 pr-12 rounded-xl text-white placeholder-slate-400 focus:outline-none" placeholder="Enter your password">
+                        <button type="button" id="toggle-password" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="remember-me" class="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-slate-300">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-blue-400 hover:text-blue-300 transition-colors">Forgot password?</a>
+                </div>
+                
+                <button type="submit" id="login-button" class="btn-primary w-full py-4 px-6 rounded-xl text-white font-semibold text-lg focus:outline-none">
+                    <span id="login-text">Sign In</span>
+                    <i id="login-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
+                </button>
+                
+                <div class="text-center">
+                    <p class="text-slate-400">
+                        Don't have an account? 
+                        <!-- *** CHANGE HERE *** -->
+                        <a href="{{ url_for('auth.register') }}" class="text-blue-400 hover:text-blue-300 font-medium transition-colors">Create one here</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="text-center mt-8">
+            <p class="text-slate-500 text-sm">© 2024 Alice Insight Suite. Powered by AI.</p>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.getElementById('toggle-password').addEventListener('click', function() {
+            const passwordField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        });
+        
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginButton = document.getElementById('login-button');
+            const loginText = document.getElementById('login-text');
+            const loginSpinner = document.getElementById('login-spinner');
+            
+            loginButton.disabled = true;
+            loginText.textContent = 'Signing In...';
+            loginSpinner.classList.remove('hidden');
+            
+            try {
+                // *** CHANGE HERE ***
+                const response = await fetch("{{ url_for('auth.api_login') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    window.showNotification('Login successful! Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = "{{ url_for('routes.dashboard') }}";
+                    }, 1000);
+                } else {
+                    window.showNotification(data.error || 'Login failed', 'error');
+                    loginButton.disabled = false;
+                    loginText.textContent = 'Sign In';
+                    loginSpinner.classList.add('hidden');
+                }
+            } catch (error) {
+                window.showNotification('Network error. Please try again.', 'error');
+                loginButton.disabled = false;
+                loginText.textContent = 'Sign In';
+                loginSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Calendar Maker{% endblock %}
+{% block header %}Smart Calendar Maker{% endblock %}
+{% block subtitle %}AI-powered content scheduling for optimal engagement{% endblock %}
+
+{% block content %}
+<style>
+.platform-youtube { background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%); }
+.platform-instagram { background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+.platform-tiktok { background: linear-gradient(135deg, #ff0050 0%, #00f2ea 100%); }
+.platform-twitter { background: linear-gradient(135deg, #1da1f2 0%, #0d8bd9 100%); }
+
+.calendar-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
+
+.calendar-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.floating-animation {
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+.slide-in-up {
+    animation: slideInUp 0.6s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.glow-effect {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.engagement-meter {
+    height: 4px;
+    background: #374151;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.engagement-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #3b82f6);
+    border-radius: 2px;
+    transition: width 1s ease-in-out;
+    width: 0%;
+}
+
+.platform-selector.selected {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.form-error {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.calendar-tab-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    cursor: pointer;
+}
+
+.calendar-tab-btn.active {
+    background: #10b981;
+    color: white;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+</style>
+
+<!-- Setup Section -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
+    <!-- Calendar Configuration -->
+    <div class="xl:col-span-2 card p-8 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-10 left-10 w-20 h-20 bg-emerald-400 rounded-full floating-animation"></div>
+            <div class="absolute top-32 right-20 w-16 h-16 bg-blue-400 rounded-full floating-animation" style="animation-delay: 2s;"></div>
+            <div class="absolute bottom-20 left-32 w-12 h-12 bg-purple-400 rounded-full floating-animation" style="animation-delay: 4s;"></div>
+        </div>
+        
+        <div class="flex items-center mb-6 relative z-10">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mr-4 glow-effect">
+                <i class="fas fa-calendar-alt text-emerald-400 text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-semibold text-white mb-1">Calendar Setup</h3>
+                <p class="text-slate-400">Configure your content strategy and posting preferences</p>
+            </div>
+        </div>
+        
+        <form id="calendar-form" class="space-y-6 relative z-10">
+            <div class="slide-in-up">
+                <label for="content-goals" class="block text-lg font-medium text-white mb-3">
+                    <i class="fas fa-bullseye text-emerald-400 mr-2"></i> Content Goals & Topics
+                </label>
+                <textarea id="content-goals" rows="4" 
+                         class="w-full p-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" 
+                         placeholder="e.g., Photography tutorials, Behind-the-scenes content, Product reviews..." required>Weekly photography tips and editing tutorials</textarea>
+                <div id="content-goals-error" class="form-error hidden"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 slide-in-up" style="animation-delay: 0.1s;">
+                <div>
+                    <label for="posting-frequency" class="block text-lg font-medium text-white mb-3">Posting Frequency</label>
+                    <select id="posting-frequency" class="w-full p-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="daily">Daily (7 posts/week)</option>
+                        <option value="frequent" selected>Frequent (4-5 posts/week)</option>
+                        <option value="regular">Regular (2-3 posts/week)</option>
+                        <option value="weekly">Weekly (1 post/week)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="content-duration" class="block text-lg font-medium text-white mb-3">Planning Period</label>
+                    <select id="content-duration" class="w-full p-4 bg-slate-800/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="2" selected>2 Weeks</option>
+                        <option value="4">1 Month</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="slide-in-up" style="animation-delay: 0.2s;">
+                <label class="block text-lg font-medium text-white mb-3">
+                    <i class="fas fa-share-alt text-blue-400 mr-2"></i> Target Platforms
+                </label>
+                <div id="platforms-error" class="form-error hidden mb-3"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <label class="platform-selector flex items-center p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 cursor-pointer hover:bg-slate-700/50 transition-all duration-300 hover:scale-105">
+                        <input type="checkbox" name="platforms" value="youtube" checked class="mr-3 rounded text-emerald-500 focus:ring-emerald-500">
+                        <i class="fab fa-youtube text-red-400 mr-2 text-lg"></i><span class="text-white text-sm font-medium">YouTube</span>
+                    </label>
+                    <label class="platform-selector flex items-center p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 cursor-pointer hover:bg-slate-700/50 transition-all duration-300 hover:scale-105">
+                        <input type="checkbox" name="platforms" value="instagram" class="mr-3 rounded text-emerald-500 focus:ring-emerald-500">
+                        <i class="fab fa-instagram text-pink-400 mr-2 text-lg"></i><span class="text-white text-sm font-medium">Instagram</span>
+                    </label>
+                    <label class="platform-selector flex items-center p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 cursor-pointer hover:bg-slate-700/50 transition-all duration-300 hover:scale-105">
+                        <input type="checkbox" name="platforms" value="tiktok" class="mr-3 rounded text-emerald-500 focus:ring-emerald-500">
+                        <i class="fab fa-tiktok text-cyan-400 mr-2 text-lg"></i><span class="text-white text-sm font-medium">TikTok</span>
+                    </label>
+                    <label class="platform-selector flex items-center p-4 rounded-xl bg-slate-700/30 border border-slate-600/30 cursor-pointer hover:bg-slate-700/50 transition-all duration-300 hover:scale-105">
+                        <input type="checkbox" name="platforms" value="twitter" class="mr-3 rounded text-emerald-500 focus:ring-emerald-500">
+                        <i class="fab fa-twitter text-blue-400 mr-2 text-lg"></i><span class="text-white text-sm font-medium">Twitter</span>
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" id="generate-calendar-button" 
+                    class="w-full btn-primary px-8 py-4 rounded-xl text-white font-semibold text-lg hover:shadow-lg transform transition-all duration-300 hover:scale-105 flex items-center justify-center slide-in-up" style="animation-delay: 0.3s;">
+                <span id="calendar-button-text">Generate Smart Calendar</span>
+                <i id="calendar-spinner" class="fas fa-spinner fa-spin ml-3 hidden"></i>
+                <i class="fas fa-magic ml-3" id="calendar-icon"></i>
+            </button>
+        </form>
+    </div>
+    
+    <div class="space-y-6">
+        <div class="card p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <h3 class="text-lg font-semibold text-white mb-4"><i class="fas fa-chart-line text-emerald-400 mr-2"></i> Optimal Posting Times</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between items-center p-3 rounded-lg bg-slate-700/30"><span class="text-slate-300 text-sm">Peak Engagement</span><span class="text-emerald-400 font-semibold">6-8 PM</span></div>
+                <div class="flex justify-between items-center p-3 rounded-lg bg-slate-700/30"><span class="text-slate-300 text-sm">Secondary Peak</span><span class="text-blue-400 font-semibold">12-2 PM</span></div>
+                <div class="flex justify-between items-center p-3 rounded-lg bg-slate-700/30"><span class="text-slate-300 text-sm">Best Days</span><span class="text-purple-400 font-semibold">Tue, Thu, Sat</span></div>
+            </div>
+        </div>
+        <div class="card p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <h3 class="text-lg font-semibold text-white mb-4"><i class="fas fa-lightbulb text-yellow-400 mr-2"></i> Pro Tips</h3>
+            <div class="space-y-3 text-sm text-slate-300">
+                <p><i class="fas fa-check-circle text-green-400 mr-2 text-xs"></i>Use specific topics for better AI suggestions</p>
+                <p><i class="fas fa-check-circle text-green-400 mr-2 text-xs"></i>Multi-platform posting can increase reach</p>
+                <p><i class="fas fa-check-circle text-green-400 mr-2 text-xs"></i>Peak hours vary by platform and audience</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generated Calendar Section -->
+<div id="calendar-results" class="hidden">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h3 class="text-2xl font-bold text-white mb-2">Your Smart Content Calendar</h3>
+            <p class="text-slate-400">AI-optimized posting schedule with content suggestions</p>
+        </div>
+        <div class="flex space-x-2">
+            <button class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/30 transition-all" title="Export calendar" id="export-calendar"><i class="fas fa-download"></i></button>
+            <button class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-500/30 transition-all" title="Share calendar" id="share-calendar"><i class="fas fa-share"></i></button>
+            <button class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 hover:bg-purple-500/30 transition-all" title="Regenerate" id="regenerate-calendar"><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="card p-6 text-center"><h3 class="text-3xl font-bold text-white mb-1" id="total-posts">0</h3><p class="text-slate-400 text-sm">Scheduled Posts</p><div class="engagement-meter mt-2"><div class="engagement-fill" id="posts-fill"></div></div></div>
+        <div class="card p-6 text-center"><h3 class="text-3xl font-bold text-white mb-1" id="optimal-times">0</h3><p class="text-slate-400 text-sm">Optimal Time Slots</p><div class="engagement-meter mt-2"><div class="engagement-fill" id="times-fill"></div></div></div>
+        <div class="card p-6 text-center"><h3 class="text-3xl font-bold text-white mb-1" id="content-types">0</h3><p class="text-slate-400 text-sm">Content Variations</p><div class="engagement-meter mt-2"><div class="engagement-fill" id="types-fill"></div></div></div>
+        <div class="card p-6 text-center"><h3 class="text-3xl font-bold text-white mb-1" id="engagement-score">0%</h3><p class="text-slate-400 text-sm">Predicted Engagement</p><div class="engagement-meter mt-2"><div class="engagement-fill" id="engagement-fill"></div></div></div>
+    </div>
+
+    <div class="mb-6"><div class="flex space-x-1 bg-slate-800 p-1 rounded-lg w-fit"><button class="calendar-tab-btn active px-4 py-2 rounded-md text-sm font-medium" data-view="list"><i class="fas fa-list mr-2"></i>List View</button><button class="calendar-tab-btn px-4 py-2 rounded-md text-sm font-medium" data-view="week"><i class="fas fa-calendar-week mr-2"></i>Week View</button><button class="calendar-tab-btn px-4 py-2 rounded-md text-sm font-medium" data-view="month"><i class="fas fa-calendar-alt mr-2"></i>Month View</button></div></div>
+    <div id="calendar-view" class="card overflow-hidden"><div class="p-6"><div id="calendar-grid" class="space-y-4"></div></div></div>
+
+    <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="card p-6"><h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-robot text-blue-400 mr-2"></i> AI Recommendations</h3><div id="ai-recommendations" class="space-y-4"></div></div>
+        <div class="card p-6"><h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-crystal-ball text-purple-400 mr-2"></i> Performance Predictions</h3><div id="performance-predictions" class="space-y-4"></div></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentCalendarData = null;
+let currentView = 'list';
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupForm();
+    setupCalendarControls();
+});
+
+function setupForm() {
+    const form = document.getElementById('calendar-form');
+    form.addEventListener('submit', handleFormSubmit);
+    
+    document.querySelectorAll('.platform-selector input').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const label = e.target.closest('label');
+            label.classList.toggle('selected', e.target.checked);
+            clearFormError('platforms');
+        });
+        if (checkbox.checked) {
+            checkbox.closest('label').classList.add('selected');
+        }
+    });
+
+    document.getElementById('content-goals').addEventListener('input', () => clearFormError('content-goals'));
+}
+
+function setupCalendarControls() {
+    document.querySelectorAll('.calendar-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.calendar-tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentView = this.dataset.view;
+            if (currentCalendarData) {
+                renderCalendarView(currentCalendarData, currentView);
+            }
+        });
+    });
+
+    document.getElementById('export-calendar')?.addEventListener('click', () => { if (currentCalendarData) exportCalendarData(currentCalendarData); });
+    document.getElementById('regenerate-calendar')?.addEventListener('click', () => { if (confirm('Regenerate calendar with the same settings?')) handleFormSubmit(new Event('submit')); });
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const formData = getFormData();
+    window.showLoading('Generating your smart calendar...');
+
+    try {
+        const response = await fetch('/api/generate-calendar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'API Error');
+
+        currentCalendarData = data;
+        displayResults(data);
+        window.showNotification('Calendar generated successfully!', 'success');
+    } catch (error) {
+        console.error('Error:', error);
+        window.showNotification(error.message, 'error');
+    } finally {
+        window.hideLoading();
+    }
+}
+
+function getFormData() {
+    return {
+        content_goals: document.getElementById('content-goals').value.trim(),
+        posting_frequency: document.getElementById('posting-frequency').value,
+        content_duration: parseInt(document.getElementById('content-duration').value),
+        platforms: Array.from(document.querySelectorAll('input[name="platforms"]:checked')).map(cb => cb.value)
+    };
+}
+
+function displayResults(data) {
+    const resultsDiv = document.getElementById('calendar-results');
+    resultsDiv.classList.remove('hidden');
+    
+    updateCalendarStats(data);
+    renderCalendarView(data, currentView);
+    populateSidePanels(data);
+
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateCalendarStats(data) {
+    const metrics = data.metrics || {};
+    const totalPosts = metrics.total_posts || 0;
+    const engagementScore = metrics.avg_engagement || 75;
+    
+    animateNumber('total-posts', totalPosts, 'posts-fill', (totalPosts / 20) * 100);
+    animateNumber('optimal-times', metrics.optimal_time_coverage || 0, 'times-fill', ((metrics.optimal_time_coverage || 0) / totalPosts) * 100);
+    animateNumber('content-types', metrics.content_types_used || 0, 'types-fill', ((metrics.content_types_used || 0) / 10) * 100);
+    animateNumber('engagement-score', Math.round(engagementScore), 'engagement-fill', engagementScore, '%');
+}
+
+function renderCalendarView(data, view) {
+    const container = document.getElementById('calendar-grid');
+    container.style.opacity = '0';
+    setTimeout(() => {
+        if (view === 'list') renderListView(container, data);
+        else if (view === 'week') renderWeekView(container, data);
+        else if (view === 'month') renderMonthView(container, data);
+        container.style.opacity = '1';
+        container.style.transition = 'opacity 0.5s ease';
+    }, 200);
+}
+
+function renderListView(container, data) {
+    const items = data.calendar_items || [];
+    container.innerHTML = items.length ? `<div class="space-y-4">${items.map(item => `
+        <div class="calendar-item flex items-center p-4 rounded-xl bg-slate-700/30 border border-slate-600/30">
+            <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center mr-4" style="background: ${getPlatformColor(item.platform).gradient}">
+                <i class="${getPlatformIcon(item.platform)} text-white text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <h4 class="text-white font-semibold text-md mb-1">${item.title}</h4>
+                <div class="flex items-center space-x-3 text-xs">
+                    <span class="text-slate-400">${new Date(item.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-green-500/20 text-green-300">${item.time}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">${item.content_type}</span>
+                </div>
+            </div>
+            <div class="text-right ml-4">
+                <div class="text-slate-400 text-xs">Engagement</div>
+                <div class="text-2xl font-bold" style="color: ${getPlatformColor(item.platform).hex}">${item.engagement_score}%</div>
+            </div>
+        </div>`).join('')}</div>` : '<p class="text-slate-400 text-center py-8">No posts to display.</p>';
+}
+
+function renderWeekView(container, data) {
+    const items = data.calendar_items || [];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    let html = '<div class="grid grid-cols-1 md:grid-cols-7 gap-4">';
+
+    days.forEach(day => {
+        const dayItems = items.filter(item => item.day === day);
+        html += `<div class="bg-slate-700/30 rounded-xl p-3 min-h-[150px]"><h4 class="text-white font-semibold text-center mb-2 border-b border-slate-600 pb-2">${day}</h4><div class="space-y-2">${dayItems.map(item => {
+            const color = getPlatformColor(item.platform);
+            return `<div class="p-2 rounded-md bg-slate-800/50 border-l-4 cursor-pointer" style="border-color:${color.hex}">
+                <div class="flex justify-between items-center text-xs mb-1">
+                    <span class="font-bold" style="color:${color.hex}">${item.platform}</span><span>${item.time}</span>
+                </div>
+                <p class="text-white text-sm font-medium leading-tight">${item.title}</p>
+            </div>`;
+        }).join('') || '<p class="text-slate-500 text-xs text-center pt-4">No posts</p>'}</div></div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function renderMonthView(container, data) {
+    const items = data.calendar_items || [];
+    const today = new Date();
+    const itemsByDate = items.reduce((acc, item) => {
+        (acc[item.date] = acc[item.date] || []).push(item);
+        return acc;
+    }, {});
+    
+    let html = `<div class="grid grid-cols-7 gap-2 text-center font-bold text-slate-400 mb-2"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div><div class="grid grid-cols-7 gap-2">`;
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    let startingDay = firstDay.getDay() - 1;
+    if(startingDay < 0) startingDay = 6;
+
+    for (let i = 0; i < startingDay; i++) { html += '<div></div>'; }
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        const dayItems = itemsByDate[dateStr] || [];
+        const isToday = day === today.getDate();
+        html += `<div class="bg-slate-700/30 rounded-lg p-2 min-h-[90px] ${isToday ? 'border-2 border-emerald-500' : ''}">
+            <div class="text-white text-sm font-bold">${day}</div>
+            <div class="flex flex-wrap gap-1 mt-1">${dayItems.map(item => `<div class="w-2 h-2 rounded-full" style="background:${getPlatformColor(item.platform).hex}" title="${item.title}"></div>`).join('')}</div>
+        </div>`;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function populateSidePanels(data) {
+    const recContainer = document.getElementById('ai-recommendations');
+    recContainer.innerHTML = (data.recommendations || []).map(rec => `<div class="p-3 rounded-lg bg-blue-500/10"><p class="text-blue-300 text-sm">${rec}</p></div>`).join('');
+    
+    const predContainer = document.getElementById('performance-predictions');
+    predContainer.innerHTML = (data.predictions || []).map(pred => `<div class="flex justify-between items-center p-3 rounded-lg bg-slate-700/30">
+        <span class="text-slate-300 text-sm"><i class="${pred.icon} mr-2" style="color:${pred.color}"></i>${pred.metric}</span>
+        <span class="font-bold text-lg" style="color:${pred.color}">${pred.value}</span>
+    </div>`).join('');
+}
+
+// Utility and Validation functions
+function validateForm() {
+    clearFormError('content-goals');
+    clearFormError('platforms');
+    let isValid = true;
+    if (document.getElementById('content-goals').value.trim().length < 10) {
+        showFormError('content-goals', 'Please provide more detailed goals (at least 10 characters).');
+        isValid = false;
+    }
+    if (document.querySelectorAll('input[name="platforms"]:checked').length === 0) {
+        showFormError('platforms', 'Please select at least one platform.');
+        isValid = false;
+    }
+    return isValid;
+}
+function getPlatformColor(p) { const c = { youtube: { hex: '#ff0000', gradient: 'linear-gradient(135deg, #ff0000, #cc0000)'}, instagram: { hex: '#E4405F', gradient: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)'}, tiktok: { hex: '#00f2ea', gradient: 'linear-gradient(135deg, #ff0050, #00f2ea)'}, twitter: { hex: '#1da1f2', gradient: 'linear-gradient(135deg, #1da1f2, #0d8bd9)'}}; return c[p] || c.youtube; }
+function getPlatformIcon(p) { const i = { youtube: 'fab fa-youtube', instagram: 'fab fa-instagram', tiktok: 'fab fa-tiktok', twitter: 'fab fa-twitter' }; return i[p] || i.youtube; }
+function animateNumber(elId, val, fillId, fillPct, suffix = '') { const el = document.getElementById(elId); const fill = document.getElementById(fillId); let current = 0; const step = Math.ceil(val / 50) || 1; requestAnimationFrame(function animate() { current += step; if (current >= val) { el.textContent = val + suffix; if (fill) fill.style.width = fillPct + '%'; } else { el.textContent = current + suffix; if (fill) fill.style.width = (fillPct * (current / val)) + '%'; requestAnimationFrame(animate); } }); }
+function showFormError(field, msg) { const err = document.getElementById(field + '-error'); if(err) {err.textContent = msg; err.classList.remove('hidden');}}
+function clearFormError(field) { const err = document.getElementById(field + '-error'); if(err) err.classList.add('hidden'); }
+function exportCalendarData(data) { const items = data.calendar_items || []; let csv = 'Date,Day,Time,Title,Platform,Content Type,Engagement Score\n'; items.forEach(i => { csv += `"${i.date}","${i.day}","${i.time}","${i.title.replace(/"/g, '""')}","${i.platform}","${i.content_type}","${i.engagement_score}"\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'content-calendar.csv'; a.click(); URL.revokeObjectURL(url); window.showNotification('Calendar exported!', 'success'); }
+</script>
+{% endblock %}
