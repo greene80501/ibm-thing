@@ -89,6 +89,14 @@ def analyze_sentiment():
     if not video_url: return jsonify({'error': 'Video URL is required'}), 400
     video_id = services.extract_video_id(video_url)
     if not video_id: return jsonify({'error': 'Invalid YouTube URL provided'}), 400
+
+    # --- Caching Logic ---
+    cached_result = database.get_cached_analysis(session['user_id'], video_id, 'sentiment')
+    if cached_result:
+        current_app.logger.info(f"Returning cached sentiment analysis for video_id: {video_id}")
+        cached_result['from_cache'] = True
+        return jsonify(cached_result)
+
     try:
         comments = services.get_youtube_comments(video_id, max_results=50)
         if not comments: return jsonify({'error': 'No comments found or comments are disabled.'}), 404
@@ -116,6 +124,7 @@ def analyze_sentiment():
         final_emotions = {e: t / analyzed_count for e, t in emotion_totals.items() if analyzed_count > 0}
         response_data = {"sentiment_data": sentiment_counts, "emotion_data": final_emotions}
         database.save_analysis_data(session['user_id'], 'sentiment', video_url, video_id, f'Real Sentiment: {video_id}', response_data, {'comments_analyzed': analyzed_count})
+        response_data['from_cache'] = False
         return jsonify(response_data)
     except Exception as e:
         current_app.logger.error(f"Sentiment analysis failed: {e}", exc_info=True)
@@ -128,6 +137,13 @@ def cluster_themes():
     if not video_url: return jsonify({'error': 'Video URL is required'}), 400
     video_id = services.extract_video_id(video_url)
     if not video_id: return jsonify({'error': 'Invalid YouTube URL provided'}), 400
+
+    # --- Caching Logic ---
+    cached_result = database.get_cached_analysis(session['user_id'], video_id, 'theme_cluster')
+    if cached_result:
+        current_app.logger.info(f"Returning cached theme cluster for video_id: {video_id}")
+        cached_result['from_cache'] = True
+        return jsonify(cached_result)
 
     try:
         comments = services.get_youtube_comments(video_id, max_results=80)
@@ -164,6 +180,7 @@ def cluster_themes():
 
         response_data = {"clusters": clusters, "outliers": outliers[:3], "total_analyzed": len(comments)}
         database.save_analysis_data(session['user_id'], 'theme_cluster', video_url, video_id, f'Real Theme Cluster: {video_id}', response_data, {'comments_analyzed': len(comments)})
+        response_data['from_cache'] = False
         return jsonify(response_data)
 
     except Exception as e:

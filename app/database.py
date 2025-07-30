@@ -177,3 +177,24 @@ def get_dashboard_stats(user_id):
     total_analyses = db.execute('SELECT COUNT(*) FROM analyses WHERE user_id = ?', (user_id,)).fetchone()[0]
     analyses_by_type = db.execute('SELECT type, COUNT(*) FROM analyses WHERE user_id = ? GROUP BY type', (user_id,)).fetchall()
     return {'total_analyses': total_analyses, 'analyses_by_type': {row['type']: row['COUNT(*)'] for row in analyses_by_type}}
+
+def get_cached_analysis(user_id, video_id, analysis_type, max_age_hours=24):
+    """
+    Get a cached analysis if it's not too old.
+    Returns the parsed data if found, otherwise None.
+    """
+    db = get_db()
+    analysis = db.execute(f'''
+        SELECT data, created_at FROM analyses
+        WHERE user_id = ? 
+        AND video_id = ? 
+        AND type = ?
+        AND datetime(created_at, '+{max_age_hours} hours') > datetime('now')
+        ORDER BY created_at DESC
+        LIMIT 1
+    ''', (user_id, video_id, analysis_type)).fetchone()
+    
+    if analysis:
+        # The 'data' column is stored as a JSON string, so we need to parse it.
+        return json.loads(analysis['data'])
+    return None

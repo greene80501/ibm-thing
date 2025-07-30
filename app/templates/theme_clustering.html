@@ -140,6 +140,12 @@ document.getElementById('clustering-form').addEventListener('submit', async func
         renderThemes('outliers-container', data.outliers, 'outlier');
         generateInsights(data);
         
+        if (data.from_cache) {
+            window.showNotification("Loaded cached results from the last 24 hours.", "info", { duration: 4000 });
+        } else {
+            window.showNotification("Theme analysis complete!", "success");
+        }
+        
     } catch (error) {
         window.showNotification(error.message, 'error');
     } finally {
@@ -191,17 +197,34 @@ function generateInsights(data) {
     insightsContainer.innerHTML = '<h4>Key Insights</h4>';
     recsContainer.innerHTML = '<h4>Content Recommendations</h4>';
 
+    if (!data || !data.clusters) {
+        insightsContainer.innerHTML += '<p>No insights available.</p>';
+        recsContainer.innerHTML += '<p>No recommendations available.</p>';
+        return;
+    }
+
     if (data.clusters.length > 3) {
         insightsContainer.innerHTML += `<p><i class="fas fa-check-circle text-green-400 mr-2"></i>High theme diversity suggests your content appeals to varied interests.</p>`;
+    } else if (data.clusters.length > 0) {
+        insightsContainer.innerHTML += `<p><i class="fas fa-check-circle text-green-400 mr-2"></i>A focused conversation around ${data.clusters.length} core themes indicates a clear message.</p>`;
     }
+
     if (data.outliers.length > 0) {
         insightsContainer.innerHTML += `<p><i class="fas fa-check-circle text-green-400 mr-2"></i>Discovered ${data.outliers.length} emerging theme(s) that could be future content opportunities.</p>`;
     }
+    
+    if (data.clusters.length === 0 && data.outliers.length === 0) {
+        insightsContainer.innerHTML += '<p>Could not identify distinct themes from the comments analyzed.</p>';
+    }
+
     if (data.clusters.length > 0) {
         recsContainer.innerHTML += `<p><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Your most dominant theme is "<strong>${data.clusters[0].summary}</strong>". Create a dedicated follow-up video on this topic.</p>`;
     }
     if (data.outliers.length > 0) {
         recsContainer.innerHTML += `<p><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Monitor the outlier theme "<strong>${data.outliers[0].summary}</strong>". If it grows, it could be a viral topic.</p>`;
+    }
+    if (data.clusters.length === 0 && data.outliers.length === 0) {
+        recsContainer.innerHTML += '<p>Engage with your audience by asking specific questions in your next video to stimulate more focused discussion.</p>';
     }
 }
 

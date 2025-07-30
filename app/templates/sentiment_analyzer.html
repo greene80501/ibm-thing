@@ -84,17 +84,24 @@ document.getElementById('sentiment-form').addEventListener('submit', async funct
             body: JSON.stringify({ video_url: videoUrl })
         });
         
-        if (!response.ok) throw new Error('Analysis failed.');
-        
         const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Analysis failed.');
+        }
         
         resultsDiv.classList.remove('hidden');
         renderSentimentChart(data.sentiment_data);
         renderEmotionChart(data.emotion_data);
         generateRecommendations(data);
+
+        if (data.from_cache) {
+            window.showNotification("Loaded cached results from the last 24 hours.", "info", { duration: 4000 });
+        } else {
+            window.showNotification("Sentiment analysis complete!", "success");
+        }
         
     } catch (error) {
-        alert('Error: ' + error.message);
+        window.showNotification(error.message, 'error');
     } finally {
         analyzeButton.disabled = false;
         analyzeButton.innerHTML = `<span>Analyze Sentiment</span>`;
@@ -120,7 +127,7 @@ function renderSentimentChart(data) {
         options: { responsive: true, maintainAspectRatio: false }
     });
     
-    document.getElementById('sentiment-summary').textContent = `Overall, ${(data.positive / total * 100).toFixed(1)}% of comments were positive.`;
+    document.getElementById('sentiment-summary').textContent = `Overall, ${(total > 0 ? (data.positive / total * 100) : 0).toFixed(1)}% of comments were positive.`;
 }
 
 function renderEmotionChart(data) {
@@ -145,8 +152,12 @@ function renderEmotionChart(data) {
         options: { responsive: true, maintainAspectRatio: false }
     });
     
-    const dominantEmotion = labels[values.indexOf(Math.max(...values))];
-    document.getElementById('emotion-summary').textContent = `The dominant emotion detected was ${dominantEmotion}, indicating a strong emotional response from viewers.`;
+    if (labels.length > 0 && values.length > 0) {
+        const dominantEmotion = labels[values.indexOf(Math.max(...values))];
+        document.getElementById('emotion-summary').textContent = `The dominant emotion detected was ${dominantEmotion}, indicating a strong emotional response from viewers.`;
+    } else {
+        document.getElementById('emotion-summary').textContent = 'No dominant emotion could be determined.';
+    }
 }
 
 function generateRecommendations(data) {
@@ -155,23 +166,25 @@ function generateRecommendations(data) {
     const { sentiment_data, emotion_data } = data;
     const total = sentiment_data.positive + sentiment_data.neutral + sentiment_data.negative;
 
-    // Sentiment-based rec
-    if (sentiment_data.positive / total > 0.7) {
-        recs.push('Excellent positive sentiment! Your content is resonating well. Create more content in this style.');
-    } else if (sentiment_data.negative / total > 0.2) {
-        recs.push('Negative sentiment is higher than average. Review negative comments to identify and address common pain points.');
+    if (total === 0) {
+        recs.push('Not enough data to generate recommendations. Try a video with more comments.');
     } else {
-        recs.push('A balanced sentiment profile. Look for ways to convert neutral comments to positive ones by asking engaging questions.');
-    }
-    
-    // Emotion-based rec
-    const dominantEmotion = Object.keys(emotion_data).reduce((a, b) => emotion_data[a] > emotion_data[b] ? a : b);
-    if (dominantEmotion === 'joy') {
-        recs.push(`The high level of '<strong>Joy</strong>' is a great sign. Double down on the humor or uplifting aspects of your content.`);
-    } else if (dominantEmotion === 'surprise') {
-        recs.push(`Viewers are '<strong>Surprised</strong>', which means your content is unpredictable. Use this to your advantage with unexpected twists or reveals.`);
-    } else if (dominantEmotion === 'sadness' || dominantEmotion === 'anger') {
-        recs.push(`The presence of '<strong>${dominantEmotion}</strong>' suggests you've touched on a sensitive or controversial topic. Handle with care and consider a follow-up to address community feelings.`);
+        if (sentiment_data.positive / total > 0.7) {
+            recs.push('Excellent positive sentiment! Your content is resonating well. Create more content in this style.');
+        } else if (sentiment_data.negative / total > 0.2) {
+            recs.push('Negative sentiment is higher than average. Review negative comments to identify and address common pain points.');
+        } else {
+            recs.push('A balanced sentiment profile. Look for ways to convert neutral comments to positive ones by asking engaging questions.');
+        }
+        
+        const dominantEmotion = Object.keys(emotion_data).reduce((a, b) => emotion_data[a] > emotion_data[b] ? a : b);
+        if (dominantEmotion === 'joy') {
+            recs.push(`The high level of '<strong>Joy</strong>' is a great sign. Double down on the humor or uplifting aspects of your content.`);
+        } else if (dominantEmotion === 'surprise') {
+            recs.push(`Viewers are '<strong>Surprised</strong>', which means your content is unpredictable. Use this to your advantage with unexpected twists or reveals.`);
+        } else if (dominantEmotion === 'sadness' || dominantEmotion === 'anger') {
+            recs.push(`The presence of '<strong>${dominantEmotion}</strong>' suggests you've touched on a sensitive or controversial topic. Handle with care and consider a follow-up to address community feelings.`);
+        }
     }
 
     recsContainer.innerHTML = recs.map(rec => `<p class="flex items-start"><i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i><span>${rec}</span></p>`).join('');
